@@ -49,10 +49,11 @@ Para probar desde iPhone, sirve el proyecto por HTTPS. GitHub Pages es suficient
 
 ## Uso
 
-- Toca `Foto rápida` para pedir permiso de cámara y guardar una foto local en IndexedDB.
-- Toca varias veces `Foto rápida` para guardar varias fotos.
-- Toca `Grabación rápida` para iniciar vídeo.
-- Toca de nuevo `Grabación rápida` para parar y guardar.
+- La app intenta preparar la cámara al entrar para reducir la espera de la primera captura. iOS puede pedir permiso en ese momento o exigir el primer toque del usuario.
+- Toca `Alicia compipiso` para guardar una foto local en IndexedDB.
+- Toca varias veces `Alicia compipiso` para guardar varias fotos.
+- Toca `Mamá móvil` para iniciar vídeo.
+- Toca de nuevo `Mamá móvil` para parar y guardar.
 - Abre `Galería local` para ver, reproducir o borrar elementos guardados.
 - En cada elemento de la galería puedes usar `Compartir`, `Abrir` o `Descargar`.
 - En iPhone, usa `Compartir` para abrir la hoja de iOS y elegir `Guardar imagen` o `Guardar vídeo` cuando esa opción esté disponible.

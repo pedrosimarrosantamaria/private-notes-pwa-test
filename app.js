@@ -54,6 +54,8 @@ function init() {
 
   if (!("mediaDevices" in navigator) || !navigator.mediaDevices.getUserMedia) {
     setStatus("Este navegador no expone getUserMedia. La cámara no está disponible aquí.", true);
+  } else {
+    warmCameraOnStartup();
   }
 }
 
@@ -142,6 +144,11 @@ function stopCameraStream() {
   cameraStream = null;
 }
 
+function stopAudioTracks() {
+  if (!cameraStream) return;
+  cameraStream.getAudioTracks().forEach((track) => track.stop());
+}
+
 async function capturePhoto() {
   try {
     setStatus("Preparando cámara para foto local...");
@@ -172,8 +179,28 @@ async function capturePhoto() {
     setStatus("Foto guardada en IndexedDB. No se ha enviado fuera del dispositivo.");
   } catch (error) {
     handleCameraError(error, "No se pudo guardar la foto.");
-  } finally {
-    stopCameraStream();
+  }
+}
+
+async function warmCameraOnStartup() {
+  try {
+    setStatus("Preparando cámara para que la primera captura sea más rápida...");
+    await getCameraStream({ audio: false });
+    setStatus("Cámara preparada. Las capturas deberían empezar más rápido.");
+  } catch (error) {
+    setStatus("Toca una conversación para activar la cámara cuando Safari lo permita.");
+    document.addEventListener("pointerdown", warmCameraFromFirstTouch, { once: true });
+  }
+}
+
+async function warmCameraFromFirstTouch(event) {
+  if (isRecording) return;
+  if (event.target.closest?.(".action-row")) return;
+  try {
+    await getCameraStream({ audio: false });
+    setStatus("Cámara preparada. Las capturas deberían empezar más rápido.");
+  } catch (error) {
+    setStatus("Safari no ha permitido preparar la cámara todavía. Toca Alicia compipiso o Mamá móvil para intentarlo.", true);
   }
 }
 
@@ -210,12 +237,11 @@ async function toggleRecording() {
     mediaRecorder.start();
     isRecording = true;
     els.videoLastMessage.textContent = "escribiendo...";
-    els.videoMeta.textContent = "grabando";
+    els.videoMeta.textContent = "";
     setStatus("Grabando vídeo local. Toca de nuevo la conversación para parar.");
   } catch (error) {
     handleCameraError(error, "No se pudo iniciar la grabación.");
     resetRecordingUi();
-    stopCameraStream();
   }
 }
 
@@ -252,7 +278,7 @@ async function saveRecording() {
     setStatus(`Fallo al guardar el vídeo: ${friendlyStorageMessage(error)}`, true);
   } finally {
     resetRecordingUi(false);
-    stopCameraStream();
+    stopAudioTracks();
   }
 }
 
@@ -400,7 +426,7 @@ function createGalleryItem(item) {
   const shareButton = document.createElement("button");
   shareButton.className = "share-button";
   shareButton.type = "button";
-  shareButton.textContent = "Compartir";
+  shareButton.textContent = item.type === "video" ? "Guardar" : "Compartir";
   shareButton.addEventListener("click", () => shareItem(item));
 
   const openLink = document.createElement("a");

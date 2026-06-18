@@ -1,16 +1,16 @@
 :root {
-  color-scheme: light;
-  --bg: #f7f3ec;
-  --surface: #fffdf8;
-  --surface-strong: #ffffff;
-  --line: #e4ded4;
-  --text: #1e1f20;
-  --muted: #70757d;
+  color-scheme: dark;
+  --bg: #050608;
+  --surface: #0d0f13;
+  --surface-strong: #151820;
+  --line: #242832;
+  --text: #f3f5f7;
+  --muted: #9aa2ad;
   --accent: #2f7d6b;
-  --accent-soft: #dff1ec;
-  --blue: #3f6fa8;
-  --red: #b64242;
-  --shadow: 0 16px 42px rgba(31, 33, 36, 0.12);
+  --accent-soft: #122821;
+  --blue: #7aa5e8;
+  --red: #ff8f8f;
+  --shadow: 0 16px 42px rgba(0, 0, 0, 0.45);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
 }
 
@@ -51,7 +51,7 @@ button {
   justify-content: space-between;
   gap: 16px;
   padding: max(16px, env(safe-area-inset-top)) 18px 14px;
-  background: rgba(255, 253, 248, 0.94);
+  background: rgba(13, 15, 19, 0.94);
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(18px);
 }
@@ -97,6 +97,7 @@ h2 {
   margin: 14px 14px 10px;
   padding: 12px;
   border: 1px solid #cfe4dc;
+  border-color: #24463c;
   border-radius: 8px;
   background: var(--accent-soft);
 }
@@ -107,7 +108,7 @@ h2 {
 
 .privacy-notice p {
   margin: 0;
-  color: #23584d;
+  color: #b9eadb;
   font-size: 0.88rem;
   line-height: 1.35;
 }
@@ -127,7 +128,7 @@ h2 {
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fbfaf6;
+  background: #11141a;
 }
 
 .status-panel p {
@@ -168,7 +169,7 @@ h2 {
 }
 
 .chat-row:active {
-  background: #f1eee7;
+  background: #181b23;
 }
 
 .action-row {
@@ -181,29 +182,29 @@ h2 {
   height: 52px;
   place-items: center;
   border-radius: 50%;
-  background: #d8e9e4;
-  color: #174d43;
+  background: #18362f;
+  color: #b9eadb;
   font-weight: 800;
 }
 
 .avatar-photo {
-  background: #dbeee6;
-  color: #236451;
+  background: #18362f;
+  color: #b9eadb;
 }
 
 .avatar-video {
-  background: #e2e8f4;
-  color: #254f87;
+  background: #172943;
+  color: #c4dcff;
 }
 
 .avatar-muted {
-  background: #eee5db;
-  color: #6a5845;
+  background: #2b261f;
+  color: #d5c4ac;
 }
 
 .avatar-muted.alt {
-  background: #eadfe5;
-  color: #71485c;
+  background: #2b2028;
+  color: #e3b7cc;
 }
 
 .chat-copy {
@@ -326,7 +327,7 @@ h2 {
   place-items: center;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fbfaf6;
+  background: #11141a;
   color: var(--text);
   font-size: 0.84rem;
   font-weight: 750;
@@ -336,14 +337,14 @@ h2 {
 
 .gallery-buttons .share-button {
   border-color: #beded4;
-  color: #23584d;
+  color: #b9eadb;
 }
 
 .delete-item-button {
   min-height: 36px;
   border: 1px solid #efc3c3;
   border-radius: 8px;
-  background: #fff7f7;
+  background: #251719;
   color: var(--red);
   font-weight: 750;
 }
