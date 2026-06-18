@@ -16,7 +16,7 @@
     <div class="app-shell">
       <header class="topbar">
         <div>
-          <p class="eyebrow">Mensajes · v7</p>
+          <p class="eyebrow">Mensajes · v8</p>
           <h1>ChispaChat</h1>
         </div>
         <button id="openGalleryButton" class="icon-button" type="button" aria-label="Abrir galería local" title="Galería local">
@@ -33,7 +33,7 @@
         <section class="status-panel" aria-live="polite">
           <video id="cameraPreview" class="camera-preview" playsinline muted autoplay hidden></video>
           <canvas id="photoCanvas" hidden></canvas>
-          <p id="statusMessage">v7 · Chats actualizados</p>
+          <p id="statusMessage">v8 · Chats actualizados</p>
         </section>
 
         <section id="zoomStories" class="zoom-stories" aria-label="Controles de zoom de cámara" hidden>
@@ -167,6 +167,12 @@
         </div>
       </form>
       <div id="chatMessages" class="message-thread" aria-live="polite"></div>
+      <form id="chatComposer" class="chat-composer" autocomplete="off">
+        <input id="chatInput" type="text" inputmode="text" placeholder="Mensaje" aria-label="Escribir mensaje">
+        <button type="submit" aria-label="Enviar mensaje" title="Enviar">
+          <span aria-hidden="true">↑</span>
+        </button>
+      </form>
     </dialog>
 
     <script src="./app.js" defer></script>

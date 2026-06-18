@@ -3,7 +3,7 @@ const DB_VERSION = 1;
 const PHOTO_STORE = "photos";
 const VIDEO_STORE = "videos";
 const APP_NAME = "ChispaChat";
-const APP_VERSION = "v7";
+const APP_VERSION = "v8";
 const HIGH_QUALITY_VIDEO = {
   facingMode: { ideal: "environment" },
   width: { ideal: 1920 },
@@ -31,6 +31,11 @@ const STATIC_CHATS = {
       ["incoming", "Asimismo, se ruega no dejar bicicletas en el descansillo durante la intervención. 🚲", "09:20"],
       ["outgoing", "Recibido. Lo comunico también a mi compañero de piso.", "09:21"],
     ],
+    replies: [
+      "Muchas gracias por la rápida respuesta. Queda todo correctamente anotado. ✅",
+      "Perfecto, mantendremos informada a la comunidad si hubiera algún cambio.",
+      "Agradecemos la colaboración. Que tenga un buen día. 🙂",
+    ],
   },
   plan: {
     title: "Plan improvisado",
@@ -43,6 +48,11 @@ const STATIC_CHATS = {
       ["incoming", "Excelente. En ese caso, procedo a reservar mesa para dos personas.", "16:07"],
       ["outgoing", "Muchas gracias. Si hubiera cualquier cambio, le aviso inmediatamente.", "16:08"],
       ["incoming", "Perfecto, quedo atento. ✨", "16:09"],
+    ],
+    replies: [
+      "Estupendo, entonces lo dejamos confirmado de ese modo. ✨",
+      "Le aviso con antelación si se produce cualquier modificación.",
+      "Muchas gracias, nos vemos en el punto acordado. 🙂",
     ],
   },
   soporte: {
@@ -57,6 +67,11 @@ const STATIC_CHATS = {
       ["incoming", "Le mantendremos informado ante cualquier actualización relevante. 📩", "08:36"],
       ["outgoing", "Quedo a la espera. Muchas gracias por la atención prestada.", "08:40"],
     ],
+    replies: [
+      "Gracias a usted. Hemos añadido su comentario al expediente correspondiente. 📌",
+      "Nuestro equipo revisará la información y le responderá por este mismo canal.",
+      "La solicitud continúa en seguimiento. Agradecemos su paciencia. ✅",
+    ],
   },
   oficina: {
     title: "Oficina Central",
@@ -69,6 +84,11 @@ const STATIC_CHATS = {
       ["incoming", "De acuerdo. Agradecemos especialmente que compruebe el apartado de observaciones.", "10:16"],
       ["outgoing", "Anotado. Haré énfasis en ese punto.", "10:18"],
       ["incoming", "Muchas gracias por su colaboración. 🤝", "10:19"],
+    ],
+    replies: [
+      "Recibido. Incorporamos su respuesta al resumen de seguimiento.",
+      "Quedamos atentos a cualquier comentario adicional que desee remitir.",
+      "Muchas gracias. Procedemos conforme a lo acordado. 🤝",
     ],
   },
   vecina: {
@@ -83,6 +103,11 @@ const STATIC_CHATS = {
       ["outgoing", "Muy amable de tu parte. Te debo un café. ☕", "18:51"],
       ["incoming", "Acepto encantada, pero sin compromiso. 😊", "18:52"],
     ],
+    replies: [
+      "Perfecto, no te preocupes. Me alegra que haya quedado resuelto. 😊",
+      "Si necesitas cualquier cosa, me dices sin problema.",
+      "Gracias de nuevo por avisar con tanta rapidez. ✨",
+    ],
   },
   banco: {
     title: "Gestoría Banco",
@@ -95,6 +120,11 @@ const STATIC_CHATS = {
       ["incoming", "Por el momento, la documentación está completa y pasa a revisión.", "13:12"],
       ["incoming", "Si necesitáramos información adicional, se lo comunicaríamos por este mismo canal.", "13:12"],
       ["outgoing", "Perfecto. Quedo atento a cualquier novedad.", "13:15"],
+    ],
+    replies: [
+      "Le confirmamos que su última indicación queda registrada correctamente.",
+      "Continuaremos con la revisión y le notificaremos cualquier avance relevante.",
+      "Gracias por su colaboración. ✅",
     ],
   },
 };
@@ -124,6 +154,8 @@ const els = {
   chatDialogTitle: document.getElementById("chatDialogTitle"),
   chatDialogSubtitle: document.getElementById("chatDialogSubtitle"),
   chatMessages: document.getElementById("chatMessages"),
+  chatComposer: document.getElementById("chatComposer"),
+  chatInput: document.getElementById("chatInput"),
 };
 
 let dbPromise;
@@ -132,6 +164,8 @@ let mediaRecorder;
 let recordedChunks = [];
 let recordingStartedAt = 0;
 let isRecording = false;
+let activeStaticChatId = "";
+const staticReplyIndexes = {};
 
 init();
 
@@ -153,6 +187,7 @@ function init() {
   els.videoChat.addEventListener("click", toggleRecording);
   els.zoomStories.addEventListener("click", handleZoomStoryClick);
   els.chatList.addEventListener("click", handleStaticChatClick);
+  els.chatComposer.addEventListener("submit", handleStaticChatSubmit);
   els.openGalleryButton.addEventListener("click", openGallery);
   els.refreshGalleryButton.addEventListener("click", renderGallery);
   els.clearGalleryButton.addEventListener("click", clearGallery);
@@ -490,23 +525,16 @@ function openStaticChat(chatId) {
   const chat = STATIC_CHATS[chatId];
   if (!chat) return;
 
+  activeStaticChatId = chatId;
   els.chatDialogTitle.textContent = chat.title;
   els.chatDialogSubtitle.textContent = chat.subtitle;
   els.chatDialogAvatar.textContent = chat.avatar;
   els.chatDialogAvatar.className = `avatar ${chat.avatarClass}`;
   els.chatMessages.innerHTML = "";
+  els.chatInput.value = "";
 
   for (const [direction, text, time] of chat.messages) {
-    const bubble = document.createElement("div");
-    bubble.className = `message-bubble ${direction}`;
-    bubble.textContent = text;
-
-    const stamp = document.createElement("span");
-    stamp.className = "message-time";
-    stamp.textContent = time;
-    bubble.appendChild(stamp);
-
-    els.chatMessages.appendChild(bubble);
+    appendMessageBubble(direction, text, time);
   }
 
   if (typeof els.chatDialog.showModal === "function") {
@@ -514,6 +542,53 @@ function openStaticChat(chatId) {
   } else {
     els.chatDialog.setAttribute("open", "");
   }
+  els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
+  setTimeout(() => els.chatInput.focus(), 150);
+}
+
+function handleStaticChatSubmit(event) {
+  event.preventDefault();
+  const text = els.chatInput.value.trim();
+  if (!text || !activeStaticChatId) return;
+
+  appendMessageBubble("outgoing", text, formatTime(new Date()));
+  els.chatInput.value = "";
+  scrollChatToBottom();
+  setStatus("Mensaje enviado.");
+
+  const chat = STATIC_CHATS[activeStaticChatId];
+  const typing = document.createElement("div");
+  typing.className = "typing-bubble";
+  typing.textContent = "escribiendo...";
+  els.chatMessages.appendChild(typing);
+  scrollChatToBottom();
+
+  window.setTimeout(() => {
+    typing.remove();
+    const replies = chat.replies || ["Recibido. Muchas gracias. ✅"];
+    const index = staticReplyIndexes[activeStaticChatId] || 0;
+    const reply = replies[index % replies.length];
+    staticReplyIndexes[activeStaticChatId] = index + 1;
+    appendMessageBubble("incoming", reply, formatTime(new Date()));
+    scrollChatToBottom();
+    setStatus("Chat actualizado.");
+  }, 850);
+}
+
+function appendMessageBubble(direction, text, time) {
+  const bubble = document.createElement("div");
+  bubble.className = `message-bubble ${direction}`;
+  bubble.textContent = text;
+
+  const stamp = document.createElement("span");
+  stamp.className = "message-time";
+  stamp.textContent = time;
+  bubble.appendChild(stamp);
+
+  els.chatMessages.appendChild(bubble);
+}
+
+function scrollChatToBottom() {
   els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
 }
 
