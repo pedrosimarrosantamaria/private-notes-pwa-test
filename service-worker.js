@@ -1,4 +1,4 @@
-const CACHE_NAME = "private-notes-pwa-v4";
+const CACHE_NAME = "private-notes-pwa-v5";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -10,6 +10,10 @@ const APP_SHELL = [
   "./icons/icon-512.png",
   "./icons/icon-192.svg",
   "./icons/icon-512.svg",
+  "./icons/story-luna.svg",
+  "./icons/story-nico.svg",
+  "./icons/story-mara.svg",
+  "./icons/story-teo.svg",
 ];
 
 self.addEventListener("install", (event) => {

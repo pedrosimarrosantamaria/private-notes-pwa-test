@@ -55,7 +55,7 @@ Para probar desde iPhone, sirve el proyecto por HTTPS. GitHub Pages es suficient
 - Toca `Mamá móvil` para iniciar vídeo.
 - Toca de nuevo `Mamá móvil` para parar y guardar.
 - La grabación pide cámara trasera a 1080p/60 fps como preferencia y usa bitrate alto. Safari/iOS puede bajar resolución o fps si el dispositivo no lo permite.
-- Mientras grabas aparecen controles tipo stories para intentar cambiar zoom: `0,5x`, `1x`, `2x` y `5x`. Safari solo los aplicará si expone la capacidad `zoom` para esa cámara.
+- Mientras grabas aparecen avatares tipo stories para intentar cambiar zoom internamente entre `0,5x`, `1x`, `2x` y `5x`. Safari solo los aplicará si expone la capacidad `zoom` para esa cámara.
 - Abre `Galería local` para ver, reproducir o borrar elementos guardados.
 - En cada elemento de la galería puedes usar `Compartir`, `Abrir` o `Descargar`.
 - En iPhone, usa `Compartir` para abrir la hoja de iOS y elegir `Guardar imagen` o `Guardar vídeo` cuando esa opción esté disponible.
