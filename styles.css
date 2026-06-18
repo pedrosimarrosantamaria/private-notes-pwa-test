@@ -138,6 +138,44 @@ h2 {
   line-height: 1.35;
 }
 
+.zoom-stories {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 10px 14px 12px;
+}
+
+.zoom-stories[hidden] {
+  display: none;
+}
+
+.story-zoom {
+  display: grid;
+  aspect-ratio: 1;
+  place-items: center;
+  border: 2px solid #303642;
+  border-radius: 50%;
+  background:
+    linear-gradient(var(--surface-strong), var(--surface-strong)) padding-box,
+    linear-gradient(135deg, #2f7d6b, #7aa5e8, #e3b7cc) border-box;
+  color: var(--text);
+  font-weight: 850;
+}
+
+.story-zoom span {
+  display: grid;
+  width: calc(100% - 10px);
+  height: calc(100% - 10px);
+  place-items: center;
+  border-radius: 50%;
+  background: #10131a;
+}
+
+.story-zoom.active span {
+  background: #203d35;
+  color: #c8f7e8;
+}
+
 .camera-preview {
   width: 100%;
   max-height: 220px;

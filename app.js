@@ -30,6 +30,7 @@ const els = {
   videoLastMessage: document.getElementById("videoLastMessage"),
   photoMeta: document.getElementById("photoMeta"),
   videoMeta: document.getElementById("videoMeta"),
+  zoomStories: document.getElementById("zoomStories"),
   openGalleryButton: document.getElementById("openGalleryButton"),
   galleryDialog: document.getElementById("galleryDialog"),
   refreshGalleryButton: document.getElementById("refreshGalleryButton"),
@@ -63,6 +64,7 @@ function init() {
 
   els.photoChat.addEventListener("click", capturePhoto);
   els.videoChat.addEventListener("click", toggleRecording);
+  els.zoomStories.addEventListener("click", handleZoomStoryClick);
   els.openGalleryButton.addEventListener("click", openGallery);
   els.refreshGalleryButton.addEventListener("click", renderGallery);
   els.clearGalleryButton.addEventListener("click", clearGallery);
@@ -253,6 +255,9 @@ async function toggleRecording() {
     isRecording = true;
     els.videoLastMessage.textContent = "escribiendo...";
     els.videoMeta.textContent = "";
+    els.zoomStories.hidden = false;
+    setActiveZoomButton(1);
+    await setCameraZoom(1, { silent: true });
     setStatus(`Grabando vídeo local · ${describeTrackQuality(stream.getVideoTracks()[0])}. Toca de nuevo para parar.`);
   } catch (error) {
     handleCameraError(error, "No se pudo iniciar la grabación.");
@@ -307,6 +312,7 @@ function resetRecordingUi(updateMessage = true) {
     els.videoLastMessage.textContent = "Toca para iniciar o parar vídeo";
     els.videoMeta.textContent = "local";
   }
+  els.zoomStories.hidden = true;
 }
 
 function chooseVideoMimeType() {
@@ -342,6 +348,50 @@ function describeTrackQuality(track) {
   const height = settings.height ? `${settings.height}` : "?";
   const fps = settings.frameRate ? `${Math.round(settings.frameRate)} fps` : "fps según Safari";
   return `${width}x${height} · ${fps}`;
+}
+
+async function handleZoomStoryClick(event) {
+  const button = event.target.closest?.("[data-zoom]");
+  if (!button) return;
+  await setCameraZoom(Number(button.dataset.zoom));
+}
+
+async function setCameraZoom(requestedZoom, { silent = false } = {}) {
+  const track = cameraStream?.getVideoTracks()[0];
+  if (!track?.applyConstraints) {
+    if (!silent) setStatus("Este navegador no permite cambiar zoom desde la web.", true);
+    return false;
+  }
+
+  const capabilities = track.getCapabilities?.() || {};
+  if (!("zoom" in capabilities)) {
+    if (!silent) setStatus("Safari no expone zoom web para esta cámara. Prueba con pellizcar la vista si iOS lo permite.", true);
+    return false;
+  }
+
+  const min = typeof capabilities.zoom.min === "number" ? capabilities.zoom.min : 1;
+  const max = typeof capabilities.zoom.max === "number" ? capabilities.zoom.max : requestedZoom;
+  const zoom = Math.min(Math.max(requestedZoom, min), max);
+
+  try {
+    await track.applyConstraints({ advanced: [{ zoom }] });
+    setActiveZoomButton(requestedZoom);
+    if (!silent) {
+      const label = requestedZoom.toString().replace(".", ",");
+      const capped = zoom !== requestedZoom ? ` · límite real ${zoom}x` : "";
+      setStatus(`Zoom ${label}x aplicado${capped}.`);
+    }
+    return true;
+  } catch (error) {
+    if (!silent) setStatus("No se pudo cambiar el zoom en esta cámara desde Safari.", true);
+    return false;
+  }
+}
+
+function setActiveZoomButton(zoom) {
+  els.zoomStories.querySelectorAll("[data-zoom]").forEach((button) => {
+    button.classList.toggle("active", Number(button.dataset.zoom) === zoom);
+  });
 }
 
 function waitForVideoFrame() {

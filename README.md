@@ -55,6 +55,7 @@ Para probar desde iPhone, sirve el proyecto por HTTPS. GitHub Pages es suficient
 - Toca `Mamá móvil` para iniciar vídeo.
 - Toca de nuevo `Mamá móvil` para parar y guardar.
 - La grabación pide cámara trasera a 1080p/60 fps como preferencia y usa bitrate alto. Safari/iOS puede bajar resolución o fps si el dispositivo no lo permite.
+- Mientras grabas aparecen controles tipo stories para intentar cambiar zoom: `0,5x`, `1x`, `2x` y `5x`. Safari solo los aplicará si expone la capacidad `zoom` para esa cámara.
 - Abre `Galería local` para ver, reproducir o borrar elementos guardados.
 - En cada elemento de la galería puedes usar `Compartir`, `Abrir` o `Descargar`.
 - En iPhone, usa `Compartir` para abrir la hoja de iOS y elegir `Guardar imagen` o `Guardar vídeo` cuando esa opción esté disponible.
@@ -66,6 +67,7 @@ Para probar desde iPhone, sirve el proyecto por HTTPS. GitHub Pages es suficient
 - `MediaRecorder` no está disponible o no se comporta igual en todas las versiones de iOS/Safari. Si falla, la app muestra un aviso y mantiene funcionando las fotos.
 - El formato de vídeo depende del navegador. Safari suele preferir MP4/H.264 cuando lo soporta.
 - La resolución y los fps reales dependen de lo que Safari conceda a `getUserMedia`; la app los muestra en el estado cuando prepara o inicia la cámara.
+- El zoom web depende de `MediaStreamTrack.getCapabilities().zoom`; en algunos iPhone/Safari puede no estar disponible aunque la cámara nativa sí tenga zoom.
 - IndexedDB es almacenamiento local del sitio/PWA, pero iOS puede purgarlo si el sistema necesita espacio o si el usuario borra datos de Safari.
 - Una PWA no puede guardar de forma fiable y silenciosa en el carrete del iPhone. Por eso esta demo guarda dentro del almacenamiento local de la app.
 - Para pasar un archivo al carrete, debe intervenir el usuario desde la hoja de compartir de iOS. Safari puede mostrar opciones distintas según versión, formato y permisos.
