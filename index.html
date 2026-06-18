@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#f7f3ec">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Private Notes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>Private Notes</title>
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="apple-touch-icon" href="./icons/icon-180.png">
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Local PWA</p>
+          <h1>Private Notes</h1>
+        </div>
+        <button id="openGalleryButton" class="icon-button" type="button" aria-label="Abrir galería local" title="Galería local">
+          <span aria-hidden="true">▦</span>
+        </button>
+      </header>
+
+      <main>
+        <section id="privacyNotice" class="privacy-notice" aria-label="Aviso de privacidad">
+          <p>Esta PWA guarda las fotos y vídeos únicamente en este dispositivo. No se sube nada a internet.</p>
+          <button id="dismissNoticeButton" type="button">Entendido</button>
+        </section>
+
+        <section class="status-panel" aria-live="polite">
+          <video id="cameraPreview" class="camera-preview" playsinline muted autoplay hidden></video>
+          <canvas id="photoCanvas" hidden></canvas>
+          <p id="statusMessage">Toca una conversación para usar la cámara local.</p>
+        </section>
+
+        <section class="chat-list" aria-label="Lista de conversaciones">
+          <button class="chat-row action-row" id="photoChat" type="button">
+            <span class="avatar avatar-photo" aria-hidden="true">F</span>
+            <span class="chat-copy">
+              <span class="chat-title">Foto rápida</span>
+              <span class="chat-last" id="photoLastMessage">Toca para guardar una foto local</span>
+            </span>
+            <span class="chat-meta" id="photoMeta">ahora</span>
+          </button>
+
+          <button class="chat-row action-row" id="videoChat" type="button">
+            <span class="avatar avatar-video" aria-hidden="true">G</span>
+            <span class="chat-copy">
+              <span class="chat-title">Grabación rápida</span>
+              <span class="chat-last" id="videoLastMessage">Toca para iniciar o parar vídeo</span>
+            </span>
+            <span class="chat-meta" id="videoMeta">local</span>
+          </button>
+
+          <button class="chat-row" type="button" aria-label="Conversación decorativa sin acciones">
+            <span class="avatar avatar-muted" aria-hidden="true">N</span>
+            <span class="chat-copy">
+              <span class="chat-title">Notas personales</span>
+              <span class="chat-last">Lista de ideas guardada para luego</span>
+            </span>
+            <span class="chat-meta">12:10</span>
+          </button>
+
+          <button class="chat-row" type="button" aria-label="Conversación decorativa sin acciones">
+            <span class="avatar avatar-muted alt" aria-hidden="true">R</span>
+            <span class="chat-copy">
+              <span class="chat-title">Recordatorios</span>
+              <span class="chat-last">Revisar permisos del navegador</span>
+            </span>
+            <span class="chat-meta">ayer</span>
+          </button>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="galleryDialog" class="gallery-dialog">
+      <form method="dialog" class="dialog-header">
+        <div>
+          <p class="eyebrow">Solo en este dispositivo</p>
+          <h2>Galería local</h2>
+        </div>
+        <button class="icon-button" value="close" aria-label="Cerrar galería" title="Cerrar" type="submit">
+          <span aria-hidden="true">×</span>
+        </button>
+      </form>
+
+      <div class="gallery-actions">
+        <button id="refreshGalleryButton" type="button">Actualizar</button>
+        <button id="clearGalleryButton" class="danger" type="button">Borrar todo</button>
+      </div>
+
+      <div id="galleryEmpty" class="empty-state">Todavía no hay fotos ni vídeos guardados.</div>
+      <div id="galleryList" class="gallery-list" aria-live="polite"></div>
+    </dialog>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>
