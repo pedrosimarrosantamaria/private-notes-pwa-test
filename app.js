@@ -394,6 +394,32 @@ function createGalleryItem(item) {
     ? `Vídeo · ${formatDuration(item.duration || 0)} · ${formatDateTime(item.createdAt)}`
     : `Foto · ${formatDateTime(item.createdAt)}`;
 
+  const buttons = document.createElement("div");
+  buttons.className = "gallery-buttons";
+
+  const shareButton = document.createElement("button");
+  shareButton.className = "share-button";
+  shareButton.type = "button";
+  shareButton.textContent = "Compartir";
+  shareButton.addEventListener("click", () => shareItem(item));
+
+  const openLink = document.createElement("a");
+  openLink.href = url;
+  openLink.target = "_blank";
+  openLink.rel = "noopener";
+  openLink.textContent = "Abrir";
+  openLink.addEventListener("click", () => {
+    setStatus("Usa la hoja de compartir de iOS para guardar el archivo abierto en Fotos si aparece esa opción.");
+  });
+
+  const downloadLink = document.createElement("a");
+  downloadLink.href = url;
+  downloadLink.download = buildFileName(item);
+  downloadLink.textContent = "Descargar";
+  downloadLink.addEventListener("click", () => {
+    setStatus("iOS puede guardar la descarga en Archivos. Para Fotos, usa Compartir y elige guardar imagen o vídeo.");
+  });
+
   const deleteButton = document.createElement("button");
   deleteButton.className = "delete-item-button";
   deleteButton.type = "button";
@@ -404,9 +430,57 @@ function createGalleryItem(item) {
     setStatus("Elemento borrado de IndexedDB.");
   });
 
-  info.append(text, deleteButton);
-  wrapper.append(media, info);
+  info.append(text);
+  buttons.append(shareButton, openLink, downloadLink, deleteButton);
+  wrapper.append(media, info, buttons);
   return wrapper;
+}
+
+async function shareItem(item) {
+  const file = new File([item.blob], buildFileName(item), {
+    type: item.mimeType || item.blob.type || "application/octet-stream",
+  });
+
+  try {
+    if (navigator.canShare?.({ files: [file] }) && navigator.share) {
+      await navigator.share({
+        files: [file],
+        title: item.type === "video" ? "Vídeo local" : "Foto local",
+        text: "Archivo guardado localmente desde Private Notes.",
+      });
+      setStatus("Hoja de compartir abierta. Elige guardar en Fotos si iOS muestra esa opción.");
+      return;
+    }
+
+    if (navigator.share) {
+      await navigator.share({
+        title: item.type === "video" ? "Vídeo local" : "Foto local",
+        text: "Este Safari no permite compartir este archivo directamente. Usa Abrir o Descargar.",
+      });
+      return;
+    }
+
+    setStatus("Este navegador no soporta compartir archivos. Usa Abrir o Descargar.", true);
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      setStatus("Compartir cancelado.");
+      return;
+    }
+    setStatus("No se pudo abrir la hoja de compartir. Prueba con Abrir o Descargar.", true);
+  }
+}
+
+function buildFileName(item) {
+  const stamp = new Date(item.createdAt).toISOString().replace(/[:.]/g, "-");
+  const mime = item.mimeType || item.blob?.type || "";
+  let extension = item.type === "photo" ? "jpg" : "mp4";
+
+  if (mime.includes("png")) extension = "png";
+  else if (mime.includes("webp")) extension = "webp";
+  else if (mime.includes("webm")) extension = "webm";
+  else if (mime.includes("mp4")) extension = "mp4";
+
+  return `private-notes-${item.type}-${stamp}.${extension}`;
 }
 
 async function clearGallery() {

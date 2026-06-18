@@ -313,6 +313,32 @@ h2 {
   font-size: 0.86rem;
 }
 
+.gallery-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.gallery-buttons button,
+.gallery-buttons a {
+  display: inline-grid;
+  min-height: 36px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfaf6;
+  color: var(--text);
+  font-size: 0.84rem;
+  font-weight: 750;
+  text-align: center;
+  text-decoration: none;
+}
+
+.gallery-buttons .share-button {
+  border-color: #beded4;
+  color: #23584d;
+}
+
 .delete-item-button {
   min-height: 36px;
   border: 1px solid #efc3c3;
@@ -339,5 +365,9 @@ h2 {
   .avatar {
     width: 48px;
     height: 48px;
+  }
+
+  .gallery-buttons {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

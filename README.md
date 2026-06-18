@@ -54,6 +54,8 @@ Para probar desde iPhone, sirve el proyecto por HTTPS. GitHub Pages es suficient
 - Toca `Grabación rápida` para iniciar vídeo.
 - Toca de nuevo `Grabación rápida` para parar y guardar.
 - Abre `Galería local` para ver, reproducir o borrar elementos guardados.
+- En cada elemento de la galería puedes usar `Compartir`, `Abrir` o `Descargar`.
+- En iPhone, usa `Compartir` para abrir la hoja de iOS y elegir `Guardar imagen` o `Guardar vídeo` cuando esa opción esté disponible.
 
 ## Limitaciones reales de iOS/Safari
 
@@ -63,4 +65,5 @@ Para probar desde iPhone, sirve el proyecto por HTTPS. GitHub Pages es suficient
 - El formato de vídeo depende del navegador. Safari suele preferir MP4/H.264 cuando lo soporta.
 - IndexedDB es almacenamiento local del sitio/PWA, pero iOS puede purgarlo si el sistema necesita espacio o si el usuario borra datos de Safari.
 - Una PWA no puede guardar de forma fiable y silenciosa en el carrete del iPhone. Por eso esta demo guarda dentro del almacenamiento local de la app.
+- Para pasar un archivo al carrete, debe intervenir el usuario desde la hoja de compartir de iOS. Safari puede mostrar opciones distintas según versión, formato y permisos.
 - Los iconos incluidos son placeholders. Para una app real, sustitúyelos por iconos finales en PNG de 180x180, 192x192 y 512x512.
