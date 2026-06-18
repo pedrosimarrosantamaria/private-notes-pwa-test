@@ -1,4 +1,4 @@
-# Private Notes PWA
+# ChispaChat PWA
 
 PWA estática de prueba para iPhone/Safari. Simula una lista de conversaciones y usa la cámara desde la web para guardar fotos y vídeos en IndexedDB, sin backend y sin enviar datos fuera del dispositivo.
 
@@ -44,7 +44,7 @@ Para probar desde iPhone, sirve el proyecto por HTTPS. GitHub Pages es suficient
 1. Abre la URL HTTPS en Safari.
 2. Pulsa el botón de compartir.
 3. Elige `Añadir a pantalla de inicio`.
-4. Confirma el nombre `Private Notes`.
+4. Confirma el nombre `ChispaChat`.
 5. Abre la app desde el icono creado.
 
 ## Uso
@@ -54,6 +54,7 @@ Para probar desde iPhone, sirve el proyecto por HTTPS. GitHub Pages es suficient
 - Toca varias veces `Alicia compipiso` para guardar varias fotos.
 - Toca `Mamá móvil` para iniciar vídeo.
 - Toca de nuevo `Mamá móvil` para parar y guardar.
+- La grabación pide cámara trasera a 1080p/60 fps como preferencia y usa bitrate alto. Safari/iOS puede bajar resolución o fps si el dispositivo no lo permite.
 - Abre `Galería local` para ver, reproducir o borrar elementos guardados.
 - En cada elemento de la galería puedes usar `Compartir`, `Abrir` o `Descargar`.
 - En iPhone, usa `Compartir` para abrir la hoja de iOS y elegir `Guardar imagen` o `Guardar vídeo` cuando esa opción esté disponible.
@@ -64,6 +65,7 @@ Para probar desde iPhone, sirve el proyecto por HTTPS. GitHub Pages es suficient
 - iOS puede volver a pedir permisos o invalidarlos al cerrar Safari, limpiar datos del sitio o reinstalar la PWA.
 - `MediaRecorder` no está disponible o no se comporta igual en todas las versiones de iOS/Safari. Si falla, la app muestra un aviso y mantiene funcionando las fotos.
 - El formato de vídeo depende del navegador. Safari suele preferir MP4/H.264 cuando lo soporta.
+- La resolución y los fps reales dependen de lo que Safari conceda a `getUserMedia`; la app los muestra en el estado cuando prepara o inicia la cámara.
 - IndexedDB es almacenamiento local del sitio/PWA, pero iOS puede purgarlo si el sistema necesita espacio o si el usuario borra datos de Safari.
 - Una PWA no puede guardar de forma fiable y silenciosa en el carrete del iPhone. Por eso esta demo guarda dentro del almacenamiento local de la app.
 - Para pasar un archivo al carrete, debe intervenir el usuario desde la hoja de compartir de iOS. Safari puede mostrar opciones distintas según versión, formato y permisos.

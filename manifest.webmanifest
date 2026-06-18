@@ -1,7 +1,7 @@
 {
-  "name": "Private Notes",
-  "short_name": "Private Notes",
-  "description": "PWA local de prueba para capturar fotos y vídeos en IndexedDB sin backend.",
+  "name": "ChispaChat",
+  "short_name": "ChispaChat",
+  "description": "PWA local de prueba con estilo de mensajería para capturar fotos y vídeos en IndexedDB sin backend.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

@@ -2,6 +2,21 @@ const DB_NAME = "private-camera-pwa";
 const DB_VERSION = 1;
 const PHOTO_STORE = "photos";
 const VIDEO_STORE = "videos";
+const APP_NAME = "ChispaChat";
+const HIGH_QUALITY_VIDEO = {
+  facingMode: { ideal: "environment" },
+  width: { ideal: 1920 },
+  height: { ideal: 1080 },
+  frameRate: { ideal: 60 },
+};
+const FALLBACK_VIDEO = {
+  facingMode: { ideal: "environment" },
+  width: { ideal: 1280 },
+  height: { ideal: 720 },
+  frameRate: { ideal: 30 },
+};
+const RECORDING_BITS_PER_SECOND = 12_000_000;
+const RECORD_AUDIO = false;
 
 const els = {
   cameraPreview: document.getElementById("cameraPreview"),
@@ -113,24 +128,24 @@ async function getCameraStream({ audio = false } = {}) {
   try {
     cameraStream = await navigator.mediaDevices.getUserMedia({
       audio,
-      video: {
-        facingMode: { ideal: "environment" },
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
-      },
+      video: HIGH_QUALITY_VIDEO,
     });
   } catch (error) {
-    if (!audio) throw error;
-
-    // Si el permiso de micrófono bloquea vídeo en algún Safari, reintentamos solo cámara.
-    cameraStream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: { ideal: "environment" },
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
-      },
-      audio: false,
-    });
+    if (!audio) {
+      cameraStream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: FALLBACK_VIDEO,
+      });
+    } else {
+      // Si el permiso de micrófono bloquea vídeo en algún Safari, reintentamos solo cámara.
+      cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: HIGH_QUALITY_VIDEO,
+        audio: false,
+      }).catch(() => navigator.mediaDevices.getUserMedia({
+        video: FALLBACK_VIDEO,
+        audio: false,
+      }));
+    }
   }
 
   els.cameraPreview.srcObject = cameraStream;
@@ -176,7 +191,7 @@ async function capturePhoto() {
     const time = formatTime(new Date());
     els.photoLastMessage.textContent = `Foto guardada · ${time}`;
     els.photoMeta.textContent = time;
-    setStatus("Foto guardada en IndexedDB. No se ha enviado fuera del dispositivo.");
+    setStatus(`Foto guardada en IndexedDB · ${describeTrackQuality(videoTrack)}.`);
   } catch (error) {
     handleCameraError(error, "No se pudo guardar la foto.");
   }
@@ -186,7 +201,7 @@ async function warmCameraOnStartup() {
   try {
     setStatus("Preparando cámara para que la primera captura sea más rápida...");
     await getCameraStream({ audio: false });
-    setStatus("Cámara preparada. Las capturas deberían empezar más rápido.");
+    setStatus(`Cámara preparada · ${describeTrackQuality(cameraStream.getVideoTracks()[0])}.`);
   } catch (error) {
     setStatus("Toca una conversación para activar la cámara cuando Safari lo permita.");
     document.addEventListener("pointerdown", warmCameraFromFirstTouch, { once: true });
@@ -218,11 +233,11 @@ async function toggleRecording() {
 
   try {
     setStatus("Preparando cámara para grabación local...");
-    const stream = await getCameraStream({ audio: true });
+    const stream = await getCameraStream({ audio: RECORD_AUDIO });
     const mimeType = chooseVideoMimeType();
     recordedChunks = [];
     recordingStartedAt = Date.now();
-    mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+    mediaRecorder = createRecorder(stream, mimeType);
 
     mediaRecorder.ondataavailable = (event) => {
       if (event.data && event.data.size > 0) recordedChunks.push(event.data);
@@ -238,7 +253,7 @@ async function toggleRecording() {
     isRecording = true;
     els.videoLastMessage.textContent = "escribiendo...";
     els.videoMeta.textContent = "";
-    setStatus("Grabando vídeo local. Toca de nuevo la conversación para parar.");
+    setStatus(`Grabando vídeo local · ${describeTrackQuality(stream.getVideoTracks()[0])}. Toca de nuevo para parar.`);
   } catch (error) {
     handleCameraError(error, "No se pudo iniciar la grabación.");
     resetRecordingUi();
@@ -304,6 +319,29 @@ function chooseVideoMimeType() {
   ];
 
   return candidates.find((candidate) => MediaRecorder.isTypeSupported?.(candidate)) || "";
+}
+
+function createRecorder(stream, mimeType) {
+  const options = {
+    videoBitsPerSecond: RECORDING_BITS_PER_SECOND,
+    audioBitsPerSecond: 128_000,
+  };
+
+  if (mimeType) options.mimeType = mimeType;
+
+  try {
+    return new MediaRecorder(stream, options);
+  } catch (error) {
+    return mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+  }
+}
+
+function describeTrackQuality(track) {
+  const settings = track?.getSettings?.() || {};
+  const width = settings.width ? `${settings.width}` : "?";
+  const height = settings.height ? `${settings.height}` : "?";
+  const fps = settings.frameRate ? `${Math.round(settings.frameRate)} fps` : "fps según Safari";
+  return `${width}x${height} · ${fps}`;
 }
 
 function waitForVideoFrame() {
@@ -472,7 +510,7 @@ async function shareItem(item) {
       await navigator.share({
         files: [file],
         title: item.type === "video" ? "Vídeo local" : "Foto local",
-        text: "Archivo guardado localmente desde Private Notes.",
+        text: `Archivo guardado localmente desde ${APP_NAME}.`,
       });
       setStatus("Hoja de compartir abierta. Elige guardar en Fotos si iOS muestra esa opción.");
       return;
