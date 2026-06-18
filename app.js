@@ -17,8 +17,89 @@ const FALLBACK_VIDEO = {
 };
 const RECORDING_BITS_PER_SECOND = 12_000_000;
 const RECORD_AUDIO = false;
+const STATIC_CHATS = {
+  portal: {
+    title: "Grupo del portal",
+    subtitle: "4 participantes",
+    avatar: "N",
+    avatarClass: "avatar-muted",
+    messages: [
+      ["incoming", "Estimados vecinos, les informo de que el técnico acudirá mañana entre las 10:00 y las 12:00. 🛠️", "09:14"],
+      ["outgoing", "Perfecto, muchas gracias por el aviso. Estaré pendiente por si necesitan acceso al cuarto común. 👍", "09:17"],
+      ["incoming", "Muy amable. En principio no debería ser necesario, pero lo tendremos en cuenta.", "09:19"],
+      ["incoming", "Asimismo, se ruega no dejar bicicletas en el descansillo durante la intervención. 🚲", "09:20"],
+      ["outgoing", "Recibido. Lo comunico también a mi compañero de piso.", "09:21"],
+    ],
+  },
+  plan: {
+    title: "Plan improvisado",
+    subtitle: "últ. vez hoy a las 11:48",
+    avatar: "R",
+    avatarClass: "avatar-muted alt",
+    messages: [
+      ["incoming", "Buenas tardes. ¿Le parecería oportuno quedar a las 19:30 en la entrada principal? 🙂", "16:02"],
+      ["outgoing", "Me parece muy bien. Llegaré con unos minutos de antelación para evitar retrasos.", "16:05"],
+      ["incoming", "Excelente. En ese caso, procedo a reservar mesa para dos personas.", "16:07"],
+      ["outgoing", "Muchas gracias. Si hubiera cualquier cambio, le aviso inmediatamente.", "16:08"],
+      ["incoming", "Perfecto, quedo atento. ✨", "16:09"],
+    ],
+  },
+  soporte: {
+    title: "Soporte Premium",
+    subtitle: "equipo verificado",
+    avatar: "S",
+    avatarClass: "avatar-amber",
+    messages: [
+      ["incoming", "Estimado usuario, hemos revisado su solicitud y confirmamos que el caso queda registrado correctamente. ✅", "08:31"],
+      ["outgoing", "Gracias por la confirmación. ¿Podrían indicarme el plazo estimado de resolución?", "08:34"],
+      ["incoming", "Por supuesto. El plazo estimado es de 24 a 48 horas laborables.", "08:36"],
+      ["incoming", "Le mantendremos informado ante cualquier actualización relevante. 📩", "08:36"],
+      ["outgoing", "Quedo a la espera. Muchas gracias por la atención prestada.", "08:40"],
+    ],
+  },
+  oficina: {
+    title: "Oficina Central",
+    subtitle: "en línea",
+    avatar: "O",
+    avatarClass: "avatar-indigo",
+    messages: [
+      ["incoming", "Buenos días. Adjuntamos el resumen revisado para su validación interna. 📎", "10:12"],
+      ["outgoing", "Buenos días. Lo reviso durante la mañana y les traslado comentarios si fuera necesario.", "10:15"],
+      ["incoming", "De acuerdo. Agradecemos especialmente que compruebe el apartado de observaciones.", "10:16"],
+      ["outgoing", "Anotado. Haré énfasis en ese punto.", "10:18"],
+      ["incoming", "Muchas gracias por su colaboración. 🤝", "10:19"],
+    ],
+  },
+  vecina: {
+    title: "Vecina 3B",
+    subtitle: "últ. vez ayer a las 20:22",
+    avatar: "V",
+    avatarClass: "avatar-rose",
+    messages: [
+      ["incoming", "Disculpa la molestia. He visto que el paquete quedó en recepción y quería avisarte. 📦", "18:44"],
+      ["outgoing", "Muchísimas gracias por avisar. Pasaré a recogerlo en cuanto llegue.", "18:49"],
+      ["incoming", "Sin problema. Lo dejé apartado para que no se extraviara.", "18:50"],
+      ["outgoing", "Muy amable de tu parte. Te debo un café. ☕", "18:51"],
+      ["incoming", "Acepto encantada, pero sin compromiso. 😊", "18:52"],
+    ],
+  },
+  banco: {
+    title: "Gestoría Banco",
+    subtitle: "canal seguro",
+    avatar: "B",
+    avatarClass: "avatar-slate",
+    messages: [
+      ["incoming", "Le confirmamos la recepción de la documentación solicitada. 🧾", "13:03"],
+      ["outgoing", "Muchas gracias. ¿Falta algún justificante adicional?", "13:07"],
+      ["incoming", "Por el momento, la documentación está completa y pasa a revisión.", "13:12"],
+      ["incoming", "Si necesitáramos información adicional, se lo comunicaríamos por este mismo canal.", "13:12"],
+      ["outgoing", "Perfecto. Quedo atento a cualquier novedad.", "13:15"],
+    ],
+  },
+};
 
 const els = {
+  chatList: document.querySelector(".chat-list"),
   cameraPreview: document.getElementById("cameraPreview"),
   photoCanvas: document.getElementById("photoCanvas"),
   statusMessage: document.getElementById("statusMessage"),
@@ -37,6 +118,11 @@ const els = {
   clearGalleryButton: document.getElementById("clearGalleryButton"),
   galleryEmpty: document.getElementById("galleryEmpty"),
   galleryList: document.getElementById("galleryList"),
+  chatDialog: document.getElementById("chatDialog"),
+  chatDialogAvatar: document.getElementById("chatDialogAvatar"),
+  chatDialogTitle: document.getElementById("chatDialogTitle"),
+  chatDialogSubtitle: document.getElementById("chatDialogSubtitle"),
+  chatMessages: document.getElementById("chatMessages"),
 };
 
 let dbPromise;
@@ -65,6 +151,7 @@ function init() {
   els.photoChat.addEventListener("click", capturePhoto);
   els.videoChat.addEventListener("click", toggleRecording);
   els.zoomStories.addEventListener("click", handleZoomStoryClick);
+  els.chatList.addEventListener("click", handleStaticChatClick);
   els.openGalleryButton.addEventListener("click", openGallery);
   els.refreshGalleryButton.addEventListener("click", renderGallery);
   els.clearGalleryButton.addEventListener("click", clearGallery);
@@ -392,6 +479,43 @@ function setActiveZoomButton(zoom) {
   els.zoomStories.querySelectorAll("[data-zoom]").forEach((button) => {
     button.classList.toggle("active", Number(button.dataset.zoom) === zoom);
   });
+}
+
+function handleStaticChatClick(event) {
+  const row = event.target.closest?.(".static-chat-row");
+  if (!row) return;
+  openStaticChat(row.dataset.chatId);
+}
+
+function openStaticChat(chatId) {
+  const chat = STATIC_CHATS[chatId];
+  if (!chat) return;
+
+  els.chatDialogTitle.textContent = chat.title;
+  els.chatDialogSubtitle.textContent = chat.subtitle;
+  els.chatDialogAvatar.textContent = chat.avatar;
+  els.chatDialogAvatar.className = `avatar ${chat.avatarClass}`;
+  els.chatMessages.innerHTML = "";
+
+  for (const [direction, text, time] of chat.messages) {
+    const bubble = document.createElement("div");
+    bubble.className = `message-bubble ${direction}`;
+    bubble.textContent = text;
+
+    const stamp = document.createElement("span");
+    stamp.className = "message-time";
+    stamp.textContent = time;
+    bubble.appendChild(stamp);
+
+    els.chatMessages.appendChild(bubble);
+  }
+
+  if (typeof els.chatDialog.showModal === "function") {
+    els.chatDialog.showModal();
+  } else {
+    els.chatDialog.setAttribute("open", "");
+  }
+  els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
 }
 
 function waitForVideoFrame() {

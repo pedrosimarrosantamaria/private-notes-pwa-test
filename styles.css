@@ -258,6 +258,26 @@ h2 {
   color: #e3b7cc;
 }
 
+.avatar-amber {
+  background: #3a2c16;
+  color: #f4d18d;
+}
+
+.avatar-indigo {
+  background: #202346;
+  color: #c4c9ff;
+}
+
+.avatar-rose {
+  background: #3b1d2b;
+  color: #f5b8d2;
+}
+
+.avatar-slate {
+  background: #202833;
+  color: #c7d2df;
+}
+
 .chat-copy {
   display: grid;
   min-width: 0;
@@ -299,8 +319,105 @@ h2 {
   box-shadow: var(--shadow);
 }
 
+.chat-dialog {
+  width: min(100%, 520px);
+  height: min(100svh, 860px);
+  max-height: 100svh;
+  padding: 0;
+  border: 0;
+  background: #080a0e;
+  color: var(--text);
+}
+
+.chat-dialog::backdrop,
 .gallery-dialog::backdrop {
   background: rgba(25, 25, 25, 0.38);
+}
+
+.chat-dialog-header {
+  display: grid;
+  grid-template-columns: 38px 44px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: max(12px, env(safe-area-inset-top)) 12px 10px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(13, 15, 19, 0.96);
+}
+
+.back-button {
+  display: inline-grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.chat-dialog-copy {
+  display: grid;
+  min-width: 0;
+}
+
+.chat-dialog-copy h2,
+.chat-dialog-copy p {
+  overflow: hidden;
+  margin: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-dialog-copy h2 {
+  font-size: 1rem;
+}
+
+.chat-dialog-copy p {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.message-thread {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-height: calc(100% - 70px);
+  padding: 14px 12px max(18px, env(safe-area-inset-bottom));
+  background:
+    radial-gradient(circle at 12px 12px, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 100%) 0 0 / 22px 22px,
+    #080a0e;
+  overflow-y: auto;
+}
+
+.message-bubble {
+  width: fit-content;
+  max-width: min(78%, 360px);
+  padding: 8px 10px 6px;
+  border-radius: 8px;
+  font-size: 0.94rem;
+  line-height: 1.32;
+}
+
+.message-bubble.incoming {
+  justify-self: start;
+  background: #1a1d24;
+  color: #f0f2f5;
+}
+
+.message-bubble.outgoing {
+  justify-self: end;
+  background: #153d34;
+  color: #ecfff8;
+}
+
+.message-time {
+  display: block;
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.68rem;
+  text-align: right;
 }
 
 .dialog-header {

@@ -56,6 +56,7 @@ Para probar desde iPhone, sirve el proyecto por HTTPS. GitHub Pages es suficient
 - Toca de nuevo `Mamá móvil` para parar y guardar.
 - La grabación pide cámara trasera a 1080p/60 fps como preferencia y usa bitrate alto. Safari/iOS puede bajar resolución o fps si el dispositivo no lo permite.
 - Mientras grabas aparecen avatares tipo stories para intentar cambiar zoom internamente entre `0,5x`, `1x`, `2x` y `5x`. Safari solo los aplicará si expone la capacidad `zoom` para esa cámara.
+- El resto de conversaciones abren chats estáticos locales con mensajes simulados. No se conectan a ningún servidor.
 - Abre `Galería local` para ver, reproducir o borrar elementos guardados.
 - En cada elemento de la galería puedes usar `Compartir`, `Abrir` o `Descargar`.
 - En iPhone, usa `Compartir` para abrir la hoja de iOS y elegir `Guardar imagen` o `Guardar vídeo` cuando esa opción esté disponible.

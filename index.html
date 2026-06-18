@@ -78,7 +78,7 @@
             <span class="chat-meta" id="videoMeta">local</span>
           </button>
 
-          <button class="chat-row" type="button" aria-label="Conversación decorativa sin acciones">
+          <button class="chat-row static-chat-row" type="button" data-chat-id="portal">
             <span class="avatar avatar-muted" aria-hidden="true">N</span>
             <span class="chat-copy">
               <span class="chat-title">Grupo del portal</span>
@@ -87,13 +87,49 @@
             <span class="chat-meta">12:10</span>
           </button>
 
-          <button class="chat-row" type="button" aria-label="Conversación decorativa sin acciones">
+          <button class="chat-row static-chat-row" type="button" data-chat-id="plan">
             <span class="avatar avatar-muted alt" aria-hidden="true">R</span>
             <span class="chat-copy">
               <span class="chat-title">Plan improvisado</span>
               <span class="chat-last">¿Quedamos en diez?</span>
             </span>
             <span class="chat-meta">ayer</span>
+          </button>
+
+          <button class="chat-row static-chat-row" type="button" data-chat-id="soporte">
+            <span class="avatar avatar-amber" aria-hidden="true">S</span>
+            <span class="chat-copy">
+              <span class="chat-title">Soporte Premium</span>
+              <span class="chat-last">Quedamos atentos a su confirmación</span>
+            </span>
+            <span class="chat-meta">lun.</span>
+          </button>
+
+          <button class="chat-row static-chat-row" type="button" data-chat-id="oficina">
+            <span class="avatar avatar-indigo" aria-hidden="true">O</span>
+            <span class="chat-copy">
+              <span class="chat-title">Oficina Central</span>
+              <span class="chat-last">Adjuntamos el resumen revisado</span>
+            </span>
+            <span class="chat-meta">dom.</span>
+          </button>
+
+          <button class="chat-row static-chat-row" type="button" data-chat-id="vecina">
+            <span class="avatar avatar-rose" aria-hidden="true">V</span>
+            <span class="chat-copy">
+              <span class="chat-title">Vecina 3B</span>
+              <span class="chat-last">Muchísimas gracias por avisar</span>
+            </span>
+            <span class="chat-meta">sáb.</span>
+          </button>
+
+          <button class="chat-row static-chat-row" type="button" data-chat-id="banco">
+            <span class="avatar avatar-slate" aria-hidden="true">B</span>
+            <span class="chat-copy">
+              <span class="chat-title">Gestoría Banco</span>
+              <span class="chat-last">La documentación queda recibida</span>
+            </span>
+            <span class="chat-meta">vie.</span>
           </button>
         </section>
       </main>
@@ -117,6 +153,20 @@
 
       <div id="galleryEmpty" class="empty-state">Todavía no hay fotos ni vídeos guardados.</div>
       <div id="galleryList" class="gallery-list" aria-live="polite"></div>
+    </dialog>
+
+    <dialog id="chatDialog" class="chat-dialog">
+      <form method="dialog" class="chat-dialog-header">
+        <button class="back-button" value="close" aria-label="Volver a conversaciones" title="Volver" type="submit">
+          <span aria-hidden="true">‹</span>
+        </button>
+        <span id="chatDialogAvatar" class="avatar avatar-muted" aria-hidden="true">C</span>
+        <div class="chat-dialog-copy">
+          <h2 id="chatDialogTitle">Conversación</h2>
+          <p id="chatDialogSubtitle">en línea</p>
+        </div>
+      </form>
+      <div id="chatMessages" class="message-thread" aria-live="polite"></div>
     </dialog>
 
     <script src="./app.js" defer></script>
