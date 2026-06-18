@@ -16,7 +16,7 @@
     <div class="app-shell">
       <header class="topbar">
         <div>
-          <p class="eyebrow">Mensajes</p>
+          <p class="eyebrow">Mensajes · v7</p>
           <h1>ChispaChat</h1>
         </div>
         <button id="openGalleryButton" class="icon-button" type="button" aria-label="Abrir galería local" title="Galería local">
@@ -26,14 +26,14 @@
 
       <main>
         <section id="privacyNotice" class="privacy-notice" aria-label="Aviso de privacidad">
-          <p>Esta PWA guarda las fotos y vídeos únicamente en este dispositivo. No se sube nada a internet.</p>
+          <p>ChispaChat funciona solo en este dispositivo. No se sube nada a internet.</p>
           <button id="dismissNoticeButton" type="button">Entendido</button>
         </section>
 
         <section class="status-panel" aria-live="polite">
           <video id="cameraPreview" class="camera-preview" playsinline muted autoplay hidden></video>
           <canvas id="photoCanvas" hidden></canvas>
-          <p id="statusMessage">Toca una conversación para usar la cámara local.</p>
+          <p id="statusMessage">v7 · Chats actualizados</p>
         </section>
 
         <section id="zoomStories" class="zoom-stories" aria-label="Controles de zoom de cámara" hidden>
@@ -64,7 +64,7 @@
             <span class="avatar avatar-photo" aria-hidden="true">A</span>
             <span class="chat-copy">
               <span class="chat-title">Alicia compipiso</span>
-              <span class="chat-last" id="photoLastMessage">te mando una foto ahora</span>
+              <span class="chat-last" id="photoLastMessage">te mando algo ahora</span>
             </span>
             <span class="chat-meta" id="photoMeta">ahora</span>
           </button>
@@ -73,7 +73,7 @@
             <span class="avatar avatar-video" aria-hidden="true">M</span>
             <span class="chat-copy">
               <span class="chat-title">Mamá móvil</span>
-              <span class="chat-last" id="videoLastMessage">nota de vídeo pendiente</span>
+              <span class="chat-last" id="videoLastMessage">nota pendiente</span>
             </span>
             <span class="chat-meta" id="videoMeta">local</span>
           </button>
@@ -151,7 +151,7 @@
         <button id="clearGalleryButton" class="danger" type="button">Borrar todo</button>
       </div>
 
-      <div id="galleryEmpty" class="empty-state">Todavía no hay fotos ni vídeos guardados.</div>
+      <div id="galleryEmpty" class="empty-state">Todavía no hay elementos en este chat.</div>
       <div id="galleryList" class="gallery-list" aria-live="polite"></div>
     </dialog>
 

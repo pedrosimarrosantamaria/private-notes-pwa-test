@@ -3,6 +3,7 @@ const DB_VERSION = 1;
 const PHOTO_STORE = "photos";
 const VIDEO_STORE = "videos";
 const APP_NAME = "ChispaChat";
+const APP_VERSION = "v7";
 const HIGH_QUALITY_VIDEO = {
   facingMode: { ideal: "environment" },
   width: { ideal: 1920 },
@@ -157,7 +158,7 @@ function init() {
   els.clearGalleryButton.addEventListener("click", clearGallery);
 
   if (!("mediaDevices" in navigator) || !navigator.mediaDevices.getUserMedia) {
-    setStatus("Este navegador no expone getUserMedia. La cámara no está disponible aquí.", true);
+    setStatus("No se pudo abrir este chat en este dispositivo.", true);
   } else {
     warmCameraOnStartup();
   }
@@ -169,7 +170,7 @@ function registerServiceWorker() {
 
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("./service-worker.js").catch(() => {
-      setStatus("No se pudo registrar el service worker. La app seguirá funcionando como web estática.", true);
+      setStatus("Modo ligero activado.", true);
     });
   });
 }
@@ -255,7 +256,7 @@ function stopAudioTracks() {
 
 async function capturePhoto() {
   try {
-    setStatus("Preparando cámara para foto local...");
+    setStatus("Abriendo conversación...");
     const stream = await getCameraStream({ audio: false });
     const videoTrack = stream.getVideoTracks()[0];
     if (!videoTrack) throw new Error("No hay pista de vídeo disponible.");
@@ -278,9 +279,9 @@ async function capturePhoto() {
     });
 
     const time = formatTime(new Date());
-    els.photoLastMessage.textContent = `Foto guardada · ${time}`;
+    els.photoLastMessage.textContent = `recibido · ${time}`;
     els.photoMeta.textContent = time;
-    setStatus(`Foto guardada en IndexedDB · ${describeTrackQuality(videoTrack)}.`);
+    setStatus("Chat actualizado.");
   } catch (error) {
     handleCameraError(error, "No se pudo guardar la foto.");
   }
@@ -288,11 +289,11 @@ async function capturePhoto() {
 
 async function warmCameraOnStartup() {
   try {
-    setStatus("Preparando cámara para que la primera captura sea más rápida...");
+    setStatus("Preparando chats...");
     await getCameraStream({ audio: false });
-    setStatus(`Cámara preparada · ${describeTrackQuality(cameraStream.getVideoTracks()[0])}.`);
+    setStatus("Chats listos.");
   } catch (error) {
-    setStatus("Toca una conversación para activar la cámara cuando Safari lo permita.");
+    setStatus("Chats actualizados.");
     document.addEventListener("pointerdown", warmCameraFromFirstTouch, { once: true });
   }
 }
@@ -302,9 +303,9 @@ async function warmCameraFromFirstTouch(event) {
   if (event.target.closest?.(".action-row")) return;
   try {
     await getCameraStream({ audio: false });
-    setStatus("Cámara preparada. Las capturas deberían empezar más rápido.");
+    setStatus("Chats listos.");
   } catch (error) {
-    setStatus("Safari no ha permitido preparar la cámara todavía. Toca Alicia compipiso o Mamá móvil para intentarlo.", true);
+    setStatus("Toca una conversación para continuar.", true);
   }
 }
 
@@ -316,12 +317,12 @@ async function toggleRecording() {
   }
 
   if (!("MediaRecorder" in window)) {
-    setStatus("La grabación de vídeo no está soportada por este navegador/dispositivo. Las fotos siguen funcionando.", true);
+    setStatus("Esta función no está disponible en este dispositivo.", true);
     return;
   }
 
   try {
-    setStatus("Preparando cámara para grabación local...");
+    setStatus("Abriendo conversación...");
     const stream = await getCameraStream({ audio: RECORD_AUDIO });
     const mimeType = chooseVideoMimeType();
     recordedChunks = [];
@@ -333,7 +334,7 @@ async function toggleRecording() {
     };
 
     mediaRecorder.onerror = () => {
-      setStatus("Fallo de grabación. Safari iOS puede limitar MediaRecorder en algunos dispositivos.", true);
+      setStatus("No se pudo completar la acción.", true);
       resetRecordingUi();
     };
 
@@ -345,7 +346,7 @@ async function toggleRecording() {
     els.zoomStories.hidden = false;
     setActiveZoomButton(1);
     await setCameraZoom(1, { silent: true });
-    setStatus(`Grabando vídeo local · ${describeTrackQuality(stream.getVideoTracks()[0])}. Toca de nuevo para parar.`);
+    setStatus("escribiendo...");
   } catch (error) {
     handleCameraError(error, "No se pudo iniciar la grabación.");
     resetRecordingUi();
@@ -378,11 +379,11 @@ async function saveRecording() {
       duration,
     });
 
-    els.videoLastMessage.textContent = `Vídeo guardado · ${formatDuration(duration)}`;
+    els.videoLastMessage.textContent = `nota enviada · ${formatDuration(duration)}`;
     els.videoMeta.textContent = formatTime(new Date());
-    setStatus("Vídeo guardado en IndexedDB. No se ha enviado fuera del dispositivo.");
+    setStatus("Mensaje enviado.");
   } catch (error) {
-    setStatus(`Fallo al guardar el vídeo: ${friendlyStorageMessage(error)}`, true);
+    setStatus(`No se pudo completar: ${friendlyStorageMessage(error)}`, true);
   } finally {
     resetRecordingUi(false);
     stopAudioTracks();
@@ -396,7 +397,7 @@ function resetRecordingUi(updateMessage = true) {
   recordingStartedAt = 0;
 
   if (updateMessage) {
-    els.videoLastMessage.textContent = "Toca para iniciar o parar vídeo";
+    els.videoLastMessage.textContent = "nota pendiente";
     els.videoMeta.textContent = "local";
   }
   els.zoomStories.hidden = true;
@@ -446,13 +447,13 @@ async function handleZoomStoryClick(event) {
 async function setCameraZoom(requestedZoom, { silent = false } = {}) {
   const track = cameraStream?.getVideoTracks()[0];
   if (!track?.applyConstraints) {
-    if (!silent) setStatus("Este navegador no permite cambiar zoom desde la web.", true);
+    if (!silent) setStatus("Ese story no está disponible aquí.", true);
     return false;
   }
 
   const capabilities = track.getCapabilities?.() || {};
   if (!("zoom" in capabilities)) {
-    if (!silent) setStatus("Safari no expone zoom web para esta cámara. Prueba con pellizcar la vista si iOS lo permite.", true);
+    if (!silent) setStatus("Ese story no está disponible aquí.", true);
     return false;
   }
 
@@ -464,13 +465,11 @@ async function setCameraZoom(requestedZoom, { silent = false } = {}) {
     await track.applyConstraints({ advanced: [{ zoom }] });
     setActiveZoomButton(requestedZoom);
     if (!silent) {
-      const label = requestedZoom.toString().replace(".", ",");
-      const capped = zoom !== requestedZoom ? ` · límite real ${zoom}x` : "";
-      setStatus(`Zoom ${label}x aplicado${capped}.`);
+      setStatus("Story actualizado.");
     }
     return true;
   } catch (error) {
-    if (!silent) setStatus("No se pudo cambiar el zoom en esta cámara desde Safari.", true);
+    if (!silent) setStatus("No se pudo cambiar de story.", true);
     return false;
   }
 }
@@ -608,7 +607,7 @@ async function renderGallery() {
       els.galleryList.appendChild(createGalleryItem(item));
     }
   } catch (error) {
-    setStatus(`No se pudo abrir la galería local: ${friendlyStorageMessage(error)}`, true);
+    setStatus(`No se pudo abrir el archivo: ${friendlyStorageMessage(error)}`, true);
   }
 }
 
@@ -647,7 +646,7 @@ function createGalleryItem(item) {
   openLink.rel = "noopener";
   openLink.textContent = "Abrir";
   openLink.addEventListener("click", () => {
-    setStatus("Usa la hoja de compartir de iOS para guardar el archivo abierto en Fotos si aparece esa opción.");
+    setStatus("Menú del sistema abierto.");
   });
 
   const downloadLink = document.createElement("a");
@@ -655,7 +654,7 @@ function createGalleryItem(item) {
   downloadLink.download = buildFileName(item);
   downloadLink.textContent = "Descargar";
   downloadLink.addEventListener("click", () => {
-    setStatus("iOS puede guardar la descarga en Archivos. Para Fotos, usa Compartir y elige guardar imagen o vídeo.");
+    setStatus("Opciones del sistema abiertas.");
   });
 
   const deleteButton = document.createElement("button");
@@ -665,7 +664,7 @@ function createGalleryItem(item) {
   deleteButton.addEventListener("click", async () => {
     await deleteItem(item.storeName, item.id);
     await renderGallery();
-    setStatus("Elemento borrado de IndexedDB.");
+    setStatus("Mensaje retirado.");
   });
 
   info.append(text);
@@ -686,7 +685,7 @@ async function shareItem(item) {
         title: item.type === "video" ? "Vídeo local" : "Foto local",
         text: `Archivo guardado localmente desde ${APP_NAME}.`,
       });
-      setStatus("Hoja de compartir abierta. Elige guardar en Fotos si iOS muestra esa opción.");
+      setStatus("Compartir abierto.");
       return;
     }
 
@@ -698,13 +697,13 @@ async function shareItem(item) {
       return;
     }
 
-    setStatus("Este navegador no soporta compartir archivos. Usa Abrir o Descargar.", true);
+    setStatus("Compartir no está disponible aquí.", true);
   } catch (error) {
     if (error?.name === "AbortError") {
-      setStatus("Compartir cancelado.");
+      setStatus("Acción cancelada.");
       return;
     }
-    setStatus("No se pudo abrir la hoja de compartir. Prueba con Abrir o Descargar.", true);
+    setStatus("No se pudo abrir compartir.", true);
   }
 }
 
@@ -722,15 +721,15 @@ function buildFileName(item) {
 }
 
 async function clearGallery() {
-  const confirmed = window.confirm("¿Borrar todas las fotos y vídeos guardados en este dispositivo?");
+  const confirmed = window.confirm("¿Limpiar todo el historial de este dispositivo?");
   if (!confirmed) return;
 
   try {
     await Promise.all([clearStore(PHOTO_STORE), clearStore(VIDEO_STORE)]);
     await renderGallery();
-    setStatus("Galería local borrada.");
+    setStatus("Historial limpiado.");
   } catch (error) {
-    setStatus(`No se pudo borrar todo: ${friendlyStorageMessage(error)}`, true);
+    setStatus(`No se pudo limpiar: ${friendlyStorageMessage(error)}`, true);
   }
 }
 
@@ -745,11 +744,11 @@ function handleCameraError(error, fallback) {
   let message = fallback;
 
   if (name === "NotAllowedError" || name === "SecurityError") {
-    message = "Permiso de cámara denegado o bloqueado. Revisa los permisos de Safari para este sitio.";
+    message = "No se pudo abrir este chat. Revisa los permisos de Safari.";
   } else if (name === "NotFoundError" || name === "OverconstrainedError") {
-    message = "Cámara no disponible o incompatible con la configuración solicitada.";
+    message = "Este chat no está disponible ahora mismo.";
   } else if (name === "NotReadableError") {
-    message = "La cámara está ocupada o no se puede leer en este momento.";
+    message = "Este chat está ocupado. Inténtalo de nuevo.";
   } else if (String(error?.message || "").includes("IndexedDB")) {
     message = friendlyStorageMessage(error);
   }
@@ -763,13 +762,13 @@ function friendlyStorageMessage(error) {
     return "el almacenamiento local parece estar lleno o bloqueado.";
   }
   if (/indexeddb/i.test(raw)) {
-    return "IndexedDB no está disponible o fue bloqueado por el navegador.";
+    return "el historial local no está disponible en este navegador.";
   }
   return raw || "error desconocido.";
 }
 
 function setStatus(message, isError = false) {
-  els.statusMessage.textContent = message;
+  els.statusMessage.textContent = `${APP_VERSION} · ${message}`;
   els.statusMessage.style.color = isError ? "var(--red)" : "var(--muted)";
 }
 
