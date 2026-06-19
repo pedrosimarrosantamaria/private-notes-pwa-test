@@ -3,8 +3,14 @@ const DB_VERSION = 1;
 const PHOTO_STORE = "photos";
 const VIDEO_STORE = "videos";
 const APP_NAME = "ChispaChat";
-const APP_VERSION = "v8";
+const APP_VERSION = "v9";
 const HIGH_QUALITY_VIDEO = {
+  facingMode: { ideal: "environment" },
+  width: { ideal: 3840 },
+  height: { ideal: 2160 },
+  frameRate: { ideal: 60 },
+};
+const HD_QUALITY_VIDEO = {
   facingMode: { ideal: "environment" },
   width: { ideal: 1920 },
   height: { ideal: 1080 },
@@ -16,7 +22,7 @@ const FALLBACK_VIDEO = {
   height: { ideal: 720 },
   frameRate: { ideal: 30 },
 };
-const RECORDING_BITS_PER_SECOND = 12_000_000;
+const RECORDING_BITS_PER_SECOND = 50_000_000;
 const RECORD_AUDIO = false;
 const STATIC_CHATS = {
   portal: {
@@ -251,31 +257,34 @@ async function getCameraStream({ audio = false } = {}) {
   stopCameraStream();
 
   try {
-    cameraStream = await navigator.mediaDevices.getUserMedia({
-      audio,
-      video: HIGH_QUALITY_VIDEO,
-    });
+    cameraStream = await getBestVideoStream(audio);
   } catch (error) {
     if (!audio) {
-      cameraStream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: FALLBACK_VIDEO,
-      });
+      cameraStream = await getBestVideoStream(false);
     } else {
       // Si el permiso de micrófono bloquea vídeo en algún Safari, reintentamos solo cámara.
-      cameraStream = await navigator.mediaDevices.getUserMedia({
-        video: HIGH_QUALITY_VIDEO,
-        audio: false,
-      }).catch(() => navigator.mediaDevices.getUserMedia({
-        video: FALLBACK_VIDEO,
-        audio: false,
-      }));
+      cameraStream = await getBestVideoStream(false);
     }
   }
 
   els.cameraPreview.srcObject = cameraStream;
   await els.cameraPreview.play();
   return cameraStream;
+}
+
+async function getBestVideoStream(audio) {
+  const profiles = [HIGH_QUALITY_VIDEO, HD_QUALITY_VIDEO, FALLBACK_VIDEO];
+  let lastError;
+
+  for (const video of profiles) {
+    try {
+      return await navigator.mediaDevices.getUserMedia({ audio, video });
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error("No se pudo abrir este chat.");
 }
 
 function stopCameraStream() {
