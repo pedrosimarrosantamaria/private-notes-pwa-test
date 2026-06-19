@@ -532,6 +532,39 @@ h2 {
   font-size: 0.86rem;
 }
 
+.technical-info {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #10131a;
+  font-size: 0.78rem;
+}
+
+.technical-info div {
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.technical-info dt,
+.technical-info dd {
+  margin: 0;
+}
+
+.technical-info dt {
+  color: #7aa5e8;
+  font-weight: 800;
+}
+
+.technical-info dd {
+  min-width: 0;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
 .gallery-buttons {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

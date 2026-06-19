@@ -59,6 +59,7 @@ Para probar desde iPhone, sirve el proyecto por HTTPS. GitHub Pages es suficient
 - El resto de conversaciones abren chats estáticos locales con mensajes simulados. No se conectan a ningún servidor.
 - Abre `Galería local` para ver, reproducir o borrar elementos guardados.
 - En cada elemento de la galería puedes usar `Compartir`, `Abrir` o `Descargar`.
+- En los vídeos, la galería muestra metadatos técnicos reales: resolución/fps concedidos, formato, tamaño, bitrate solicitado y datos de zoom.
 - En iPhone, usa `Compartir` para abrir la hoja de iOS y elegir `Guardar imagen` o `Guardar vídeo` cuando esa opción esté disponible.
 
 ## Limitaciones reales de iOS/Safari

@@ -3,7 +3,7 @@ const DB_VERSION = 1;
 const PHOTO_STORE = "photos";
 const VIDEO_STORE = "videos";
 const APP_NAME = "ChispaChat";
-const APP_VERSION = "v9";
+const APP_VERSION = "v10";
 const HIGH_QUALITY_VIDEO = {
   facingMode: { ideal: "environment" },
   width: { ideal: 3840 },
@@ -408,6 +408,9 @@ async function saveRecording() {
     const endedAt = Date.now();
     const duration = Math.max(0, Math.round((endedAt - recordingStartedAt) / 1000));
     const mimeType = mediaRecorder?.mimeType || recordedChunks[0]?.type || "video/mp4";
+    const videoTrack = cameraStream?.getVideoTracks()[0];
+    const videoSettings = videoTrack?.getSettings?.() || {};
+    const videoCapabilities = videoTrack?.getCapabilities?.() || {};
     const blob = new Blob(recordedChunks, { type: mimeType });
 
     if (!blob.size) {
@@ -421,6 +424,24 @@ async function saveRecording() {
       createdAt: new Date(recordingStartedAt).toISOString(),
       endedAt: new Date(endedAt).toISOString(),
       duration,
+      technical: {
+        requestedWidth: HIGH_QUALITY_VIDEO.width.ideal,
+        requestedHeight: HIGH_QUALITY_VIDEO.height.ideal,
+        requestedFrameRate: HIGH_QUALITY_VIDEO.frameRate.ideal,
+        requestedVideoBitsPerSecond: RECORDING_BITS_PER_SECOND,
+        actualWidth: videoSettings.width || null,
+        actualHeight: videoSettings.height || null,
+        actualFrameRate: videoSettings.frameRate || null,
+        facingMode: videoSettings.facingMode || null,
+        deviceId: videoSettings.deviceId ? "available" : null,
+        mimeType,
+        blobType: blob.type || null,
+        blobSize: blob.size,
+        recorderMimeType: mediaRecorder?.mimeType || null,
+        zoom: videoSettings.zoom || null,
+        zoomMin: videoCapabilities.zoom?.min ?? null,
+        zoomMax: videoCapabilities.zoom?.max ?? null,
+      },
     });
 
     els.videoLastMessage.textContent = `nota enviada · ${formatDuration(duration)}`;
@@ -715,6 +736,8 @@ function createGalleryItem(item) {
     ? `Vídeo · ${formatDuration(item.duration || 0)} · ${formatDateTime(item.createdAt)}`
     : `Foto · ${formatDateTime(item.createdAt)}`;
 
+  const technical = item.type === "video" ? createTechnicalInfo(item) : null;
+
   const buttons = document.createElement("div");
   buttons.className = "gallery-buttons";
 
@@ -753,8 +776,49 @@ function createGalleryItem(item) {
 
   info.append(text);
   buttons.append(shareButton, openLink, downloadLink, deleteButton);
-  wrapper.append(media, info, buttons);
+  if (technical) wrapper.append(media, info, technical, buttons);
+  else wrapper.append(media, info, buttons);
   return wrapper;
+}
+
+function createTechnicalInfo(item) {
+  const technical = item.technical || {};
+  const actualResolution = technical.actualWidth && technical.actualHeight
+    ? `${technical.actualWidth}x${technical.actualHeight}`
+    : "desconocida";
+  const actualFps = technical.actualFrameRate
+    ? `${roundOne(technical.actualFrameRate)} fps`
+    : "desconocido";
+  const requestedResolution = technical.requestedWidth && technical.requestedHeight
+    ? `${technical.requestedWidth}x${technical.requestedHeight}`
+    : "3840x2160";
+  const requestedFps = technical.requestedFrameRate
+    ? `${technical.requestedFrameRate} fps`
+    : "60 fps";
+  const requestedBitrate = technical.requestedVideoBitsPerSecond
+    ? `${Math.round(technical.requestedVideoBitsPerSecond / 1_000_000)} Mbps`
+    : "50 Mbps";
+  const size = technical.blobSize || item.blob?.size
+    ? formatBytes(technical.blobSize || item.blob.size)
+    : "desconocido";
+  const mime = technical.mimeType || item.mimeType || "desconocido";
+  const blobType = technical.blobType || "desconocido";
+  const zoom = technical.zoom ? `${roundOne(technical.zoom)}x` : "sin dato";
+  const zoomRange = technical.zoomMin !== null && technical.zoomMax !== null
+    ? `${technical.zoomMin}x-${technical.zoomMax}x`
+    : "sin dato";
+
+  const box = document.createElement("dl");
+  box.className = "technical-info";
+  box.innerHTML = `
+    <div><dt>Solicitado</dt><dd>${requestedResolution} · ${requestedFps} · ${requestedBitrate}</dd></div>
+    <div><dt>Concedido</dt><dd>${actualResolution} · ${actualFps}</dd></div>
+    <div><dt>Formato</dt><dd>${mime}</dd></div>
+    <div><dt>Blob</dt><dd>${blobType} · ${size}</dd></div>
+    <div><dt>Cámara</dt><dd>${technical.facingMode || "sin dato"}</dd></div>
+    <div><dt>Zoom</dt><dd>${zoom} · rango ${zoomRange}</dd></div>
+  `;
+  return box;
 }
 
 async function shareItem(item) {
@@ -874,4 +938,16 @@ function formatDuration(seconds) {
   const mins = Math.floor(seconds / 60).toString().padStart(2, "0");
   const secs = Math.floor(seconds % 60).toString().padStart(2, "0");
   return `${mins}:${secs}`;
+}
+
+function roundOne(value) {
+  return Math.round(Number(value) * 10) / 10;
+}
+
+function formatBytes(bytes) {
+  const value = Number(bytes) || 0;
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${roundOne(value / 1024)} KB`;
+  if (value < 1024 * 1024 * 1024) return `${roundOne(value / (1024 * 1024))} MB`;
+  return `${roundOne(value / (1024 * 1024 * 1024))} GB`;
 }
