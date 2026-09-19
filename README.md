@@ -62,6 +62,8 @@ Para probar desde iPhone, sirve el proyecto por HTTPS. GitHub Pages es suficient
 - Abre `Galería local` para ver, reproducir o borrar elementos guardados.
 - En cada elemento de la galería puedes usar `Compartir`, `Abrir` o `Descargar`.
 - En los vídeos, la galería muestra metadatos técnicos reales: resolución/fps al iniciar y finalizar, resolución codificada del archivo, bitrate estimado, formato, tamaño y datos de zoom.
+- La galería usa modo seguro: carga solo resúmenes y una única vista previa bajo demanda. La cámara se libera antes de abrirla y no puede abrirse durante una grabación.
+- Si iOS recarga la PWA mientras la galería estaba abierta, la siguiente carga muestra un aviso explicando la interrupción.
 - En iPhone, usa `Compartir` para abrir la hoja de iOS y elegir `Guardar imagen` o `Guardar vídeo` cuando esa opción esté disponible.
 
 ## Limitaciones reales de iOS/Safari

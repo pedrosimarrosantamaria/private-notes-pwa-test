@@ -16,7 +16,7 @@
     <div class="app-shell">
       <header class="topbar">
         <div>
-          <p class="eyebrow">Mensajes · v11</p>
+          <p class="eyebrow">Mensajes · v12</p>
           <h1>ChispaChat</h1>
         </div>
         <button id="openGalleryButton" class="icon-button" type="button" aria-label="Abrir galería local" title="Galería local">
@@ -33,7 +33,7 @@
         <section class="status-panel" aria-live="polite">
           <video id="cameraPreview" class="camera-preview" playsinline muted autoplay aria-hidden="true"></video>
           <canvas id="photoCanvas" hidden></canvas>
-          <p id="statusMessage">v11 · Chats actualizados</p>
+          <p id="statusMessage">v12 · Chats actualizados</p>
         </section>
 
         <section id="zoomStories" class="zoom-stories" aria-label="Controles de zoom de cámara" hidden>
@@ -61,7 +61,7 @@
 
         <section class="chat-list" aria-label="Lista de conversaciones">
           <button class="chat-row action-row" id="photoChat" type="button">
-            <span class="avatar avatar-photo" aria-hidden="true">A</span>
+            <img class="avatar avatar-image" src="./icons/story-luna.svg" alt="" aria-hidden="true">
             <span class="chat-copy">
               <span class="chat-title">Alicia compipiso</span>
               <span class="chat-last" id="photoLastMessage">te mando algo ahora</span>
@@ -70,7 +70,7 @@
           </button>
 
           <button class="chat-row action-row" id="videoChat" type="button">
-            <span class="avatar avatar-video" aria-hidden="true">M</span>
+            <img class="avatar avatar-image" src="./icons/story-mara.svg" alt="" aria-hidden="true">
             <span class="chat-copy">
               <span class="chat-title">Mamá móvil</span>
               <span class="chat-last" id="videoLastMessage">nota pendiente</span>
@@ -79,7 +79,7 @@
           </button>
 
           <button class="chat-row static-chat-row" type="button" data-chat-id="portal">
-            <span class="avatar avatar-muted" aria-hidden="true">N</span>
+            <img class="avatar avatar-image" src="./icons/story-nico.svg" alt="" aria-hidden="true">
             <span class="chat-copy">
               <span class="chat-title">Grupo del portal</span>
               <span class="chat-last">Luego os cuento bien</span>
@@ -88,7 +88,7 @@
           </button>
 
           <button class="chat-row static-chat-row" type="button" data-chat-id="plan">
-            <span class="avatar avatar-muted alt" aria-hidden="true">R</span>
+            <img class="avatar avatar-image" src="./icons/story-teo.svg" alt="" aria-hidden="true">
             <span class="chat-copy">
               <span class="chat-title">Plan improvisado</span>
               <span class="chat-last">¿Quedamos en diez?</span>
@@ -97,7 +97,7 @@
           </button>
 
           <button class="chat-row static-chat-row" type="button" data-chat-id="soporte">
-            <span class="avatar avatar-amber" aria-hidden="true">S</span>
+            <img class="avatar avatar-image" src="./icons/story-luna.svg" alt="" aria-hidden="true">
             <span class="chat-copy">
               <span class="chat-title">Soporte Premium</span>
               <span class="chat-last">Quedamos atentos a su confirmación</span>
@@ -106,7 +106,7 @@
           </button>
 
           <button class="chat-row static-chat-row" type="button" data-chat-id="oficina">
-            <span class="avatar avatar-indigo" aria-hidden="true">O</span>
+            <img class="avatar avatar-image" src="./icons/story-mara.svg" alt="" aria-hidden="true">
             <span class="chat-copy">
               <span class="chat-title">Oficina Central</span>
               <span class="chat-last">Adjuntamos el resumen revisado</span>
@@ -115,7 +115,7 @@
           </button>
 
           <button class="chat-row static-chat-row" type="button" data-chat-id="vecina">
-            <span class="avatar avatar-rose" aria-hidden="true">V</span>
+            <img class="avatar avatar-image" src="./icons/story-luna.svg" alt="" aria-hidden="true">
             <span class="chat-copy">
               <span class="chat-title">Vecina 3B</span>
               <span class="chat-last">Muchísimas gracias por avisar</span>
@@ -124,7 +124,7 @@
           </button>
 
           <button class="chat-row static-chat-row" type="button" data-chat-id="banco">
-            <span class="avatar avatar-slate" aria-hidden="true">B</span>
+            <img class="avatar avatar-image" src="./icons/story-teo.svg" alt="" aria-hidden="true">
             <span class="chat-copy">
               <span class="chat-title">Gestoría Banco</span>
               <span class="chat-last">La documentación queda recibida</span>

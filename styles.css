@@ -241,6 +241,25 @@ h2 {
   font-weight: 800;
 }
 
+.avatar-image {
+  display: block;
+  padding: 0;
+  border: 0;
+  object-fit: cover;
+}
+
+.avatar-image-host {
+  overflow: hidden;
+  padding: 0;
+}
+
+.avatar-image-host img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .avatar-photo {
   background: #18362f;
   color: #b9eadb;
@@ -599,6 +618,29 @@ h2 {
   border-radius: 8px;
   background: #111;
   object-fit: contain;
+}
+
+.gallery-preview-host:not(:empty) {
+  display: grid;
+  min-height: 52px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #090b0f;
+  color: var(--muted);
+  font-size: 0.82rem;
+  overflow: hidden;
+}
+
+.gallery-preview-host.loading,
+.gallery-preview-host.error {
+  padding: 12px;
+  text-align: center;
+}
+
+.gallery-preview-host.error {
+  border-color: #6e3434;
+  color: #ffaaaa;
 }
 
 .gallery-info {

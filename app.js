@@ -3,7 +3,7 @@ const DB_VERSION = 1;
 const PHOTO_STORE = "photos";
 const VIDEO_STORE = "videos";
 const APP_NAME = "ChispaChat";
-const APP_VERSION = "v11";
+const APP_VERSION = "v12";
 const VIDEO_PROFILES = [
   { width: 3840, height: 2160, frameRate: 60 },
   { width: 3840, height: 2160, frameRate: 30 },
@@ -17,12 +17,14 @@ const MIN_RECORDING_HEIGHT = 720;
 const MIN_RECORDING_FPS = 24;
 const RECORDING_BITS_PER_SECOND = 50_000_000;
 const RECORD_AUDIO = false;
+const GALLERY_ITEM_LIMIT = 24;
 const STATIC_CHATS = {
   portal: {
     title: "Grupo del portal",
     subtitle: "4 participantes",
     avatar: "N",
     avatarClass: "avatar-muted",
+    avatarSrc: "./icons/story-nico.svg",
     messages: [
       ["incoming", "Estimados vecinos, les informo de que el técnico acudirá mañana entre las 10:00 y las 12:00. 🛠️", "09:14"],
       ["outgoing", "Perfecto, muchas gracias por el aviso. Estaré pendiente por si necesitan acceso al cuarto común. 👍", "09:17"],
@@ -41,6 +43,7 @@ const STATIC_CHATS = {
     subtitle: "últ. vez hoy a las 11:48",
     avatar: "R",
     avatarClass: "avatar-muted alt",
+    avatarSrc: "./icons/story-teo.svg",
     messages: [
       ["incoming", "Buenas tardes. ¿Le parecería oportuno quedar a las 19:30 en la entrada principal? 🙂", "16:02"],
       ["outgoing", "Me parece muy bien. Llegaré con unos minutos de antelación para evitar retrasos.", "16:05"],
@@ -59,6 +62,7 @@ const STATIC_CHATS = {
     subtitle: "equipo verificado",
     avatar: "S",
     avatarClass: "avatar-amber",
+    avatarSrc: "./icons/story-luna.svg",
     messages: [
       ["incoming", "Estimado usuario, hemos revisado su solicitud y confirmamos que el caso queda registrado correctamente. ✅", "08:31"],
       ["outgoing", "Gracias por la confirmación. ¿Podrían indicarme el plazo estimado de resolución?", "08:34"],
@@ -77,6 +81,7 @@ const STATIC_CHATS = {
     subtitle: "en línea",
     avatar: "O",
     avatarClass: "avatar-indigo",
+    avatarSrc: "./icons/story-mara.svg",
     messages: [
       ["incoming", "Buenos días. Adjuntamos el resumen revisado para su validación interna. 📎", "10:12"],
       ["outgoing", "Buenos días. Lo reviso durante la mañana y les traslado comentarios si fuera necesario.", "10:15"],
@@ -95,6 +100,7 @@ const STATIC_CHATS = {
     subtitle: "últ. vez ayer a las 20:22",
     avatar: "V",
     avatarClass: "avatar-rose",
+    avatarSrc: "./icons/story-luna.svg",
     messages: [
       ["incoming", "Disculpa la molestia. He visto que el paquete quedó en recepción y quería avisarte. 📦", "18:44"],
       ["outgoing", "Muchísimas gracias por avisar. Pasaré a recogerlo en cuanto llegue.", "18:49"],
@@ -113,6 +119,7 @@ const STATIC_CHATS = {
     subtitle: "canal seguro",
     avatar: "B",
     avatarClass: "avatar-slate",
+    avatarSrc: "./icons/story-teo.svg",
     messages: [
       ["incoming", "Le confirmamos la recepción de la documentación solicitada. 🧾", "13:03"],
       ["outgoing", "Muchas gracias. ¿Falta algún justificante adicional?", "13:07"],
@@ -173,6 +180,7 @@ let recordingStartSettings = {};
 let fakeAudioStartedAt = 0;
 let fakeAudioTimer = null;
 let activeStaticChatId = "";
+let activeGalleryPreview = null;
 const staticReplyIndexes = {};
 
 init();
@@ -181,6 +189,7 @@ init();
 function init() {
   registerServiceWorker();
   dbPromise = openDatabase();
+  installRuntimeDiagnostics();
 
   if (localStorage.getItem("privateNotesPrivacySeen") === "1") {
     els.privacyNotice.hidden = true;
@@ -198,14 +207,44 @@ function init() {
   els.chatComposer.addEventListener("submit", handleStaticChatSubmit);
   els.fakeAudioButton.addEventListener("click", toggleFakeAudio);
   els.chatDialog.addEventListener("close", resetFakeAudio);
+  els.galleryDialog.addEventListener("close", handleGalleryClosed);
   els.openGalleryButton.addEventListener("click", openGallery);
   els.refreshGalleryButton.addEventListener("click", renderGallery);
   els.clearGalleryButton.addEventListener("click", clearGallery);
 
   if (!("mediaDevices" in navigator) || !navigator.mediaDevices.getUserMedia) {
     setStatus("No se pudo abrir este chat en este dispositivo.", true);
-  } else {
-    warmCameraOnStartup();
+  }
+
+  if (sessionStorage.getItem("chispaChatGalleryActive") === "1") {
+    sessionStorage.removeItem("chispaChatGalleryActive");
+    setStatus("La última apertura de archivos fue interrumpida por iOS. Se ha activado el modo seguro.", true);
+  }
+}
+
+function installRuntimeDiagnostics() {
+  window.addEventListener("error", (event) => {
+    reportRuntimeError(event.error || event.message, "JavaScript");
+  });
+
+  window.addEventListener("unhandledrejection", (event) => {
+    reportRuntimeError(event.reason, "Operación asíncrona");
+  });
+}
+
+function reportRuntimeError(error, context) {
+  const message = error?.message || String(error || "Error desconocido");
+  const readable = message.length > 140 ? `${message.slice(0, 137)}...` : message;
+  setStatus(`Error en ${context}: ${readable}`, true);
+
+  try {
+    localStorage.setItem("chispaChatLastError", JSON.stringify({
+      at: new Date().toISOString(),
+      context,
+      message: readable,
+    }));
+  } catch (storageError) {
+    // El diagnóstico visible sigue funcionando aunque localStorage esté bloqueado.
   }
 }
 
@@ -420,28 +459,6 @@ async function capturePhoto() {
     setStatus("Chat actualizado.");
   } catch (error) {
     handleCameraError(error, "No se pudo guardar la foto.");
-  }
-}
-
-async function warmCameraOnStartup() {
-  try {
-    setStatus("Preparando chats...");
-    await getCameraStream({ audio: false });
-    setStatus("Chats listos.");
-  } catch (error) {
-    setStatus("Chats actualizados.");
-    document.addEventListener("pointerdown", warmCameraFromFirstTouch, { once: true });
-  }
-}
-
-async function warmCameraFromFirstTouch(event) {
-  if (isRecording) return;
-  if (event.target.closest?.(".action-row")) return;
-  try {
-    await getCameraStream({ audio: false });
-    setStatus("Chats listos.");
-  } catch (error) {
-    setStatus("Toca una conversación para continuar.", true);
   }
 }
 
@@ -735,8 +752,16 @@ function openStaticChat(chatId) {
   activeStaticChatId = chatId;
   els.chatDialogTitle.textContent = chat.title;
   els.chatDialogSubtitle.textContent = chat.subtitle;
-  els.chatDialogAvatar.textContent = chat.avatar;
-  els.chatDialogAvatar.className = `avatar ${chat.avatarClass}`;
+  els.chatDialogAvatar.replaceChildren();
+  els.chatDialogAvatar.className = `avatar avatar-image-host ${chat.avatarClass}`;
+  if (chat.avatarSrc) {
+    const avatarImage = document.createElement("img");
+    avatarImage.src = chat.avatarSrc;
+    avatarImage.alt = "";
+    els.chatDialogAvatar.appendChild(avatarImage);
+  } else {
+    els.chatDialogAvatar.textContent = chat.avatar;
+  }
   els.chatMessages.innerHTML = "";
   els.chatInput.value = "";
 
@@ -882,13 +907,45 @@ async function saveItem(storeName, item) {
   });
 }
 
-async function getAllItems(storeName) {
+async function getItem(storeName, id) {
   const db = await dbPromise;
   return new Promise((resolve, reject) => {
     const tx = db.transaction(storeName, "readonly");
-    const request = tx.objectStore(storeName).getAll();
-    request.onsuccess = () => resolve(request.result || []);
+    const request = tx.objectStore(storeName).get(id);
+    request.onsuccess = () => resolve(request.result || null);
     request.onerror = () => reject(request.error || new Error("No se pudo leer IndexedDB."));
+  });
+}
+
+async function getRecentItemSummaries(storeName, limit = GALLERY_ITEM_LIMIT) {
+  const db = await dbPromise;
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, "readonly");
+    const request = tx.objectStore(storeName).openCursor(null, "prev");
+    const summaries = [];
+
+    request.onsuccess = () => {
+      const cursor = request.result;
+      if (!cursor || summaries.length >= limit) {
+        resolve(summaries);
+        return;
+      }
+
+      const item = cursor.value;
+      summaries.push({
+        id: item.id,
+        type: item.type,
+        mimeType: item.mimeType,
+        createdAt: item.createdAt,
+        endedAt: item.endedAt,
+        duration: item.duration,
+        technical: item.technical,
+        blobSize: item.blob?.size || item.technical?.blobSize || 0,
+        storeName,
+      });
+      cursor.continue();
+    };
+    request.onerror = () => reject(request.error || new Error("No se pudo leer el historial local."));
   });
 }
 
@@ -912,8 +969,15 @@ async function clearStore(storeName) {
   });
 }
 
-// La galería crea URLs temporales para previsualizar los Blob guardados.
 async function openGallery() {
+  if (isRecording) {
+    setStatus("Termina la nota en curso antes de abrir los archivos.", true);
+    return;
+  }
+
+  stopCameraStream();
+  closeActiveGalleryPreview();
+  sessionStorage.setItem("chispaChatGalleryActive", "1");
   if (typeof els.galleryDialog.showModal === "function") {
     els.galleryDialog.showModal();
   } else {
@@ -922,16 +986,23 @@ async function openGallery() {
   await renderGallery();
 }
 
+function handleGalleryClosed() {
+  closeActiveGalleryPreview();
+  sessionStorage.removeItem("chispaChatGalleryActive");
+}
+
 async function renderGallery() {
   try {
-    revokeGalleryUrls();
+    closeActiveGalleryPreview();
     els.galleryList.innerHTML = "";
 
-    const [photos, videos] = await Promise.all([getAllItems(PHOTO_STORE), getAllItems(VIDEO_STORE)]);
-    const items = [
-      ...photos.map((item) => ({ ...item, storeName: PHOTO_STORE })),
-      ...videos.map((item) => ({ ...item, storeName: VIDEO_STORE })),
-    ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const [photos, videos] = await Promise.all([
+      getRecentItemSummaries(PHOTO_STORE),
+      getRecentItemSummaries(VIDEO_STORE),
+    ]);
+    const items = [...photos, ...videos]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, GALLERY_ITEM_LIMIT);
 
     els.galleryEmpty.hidden = items.length > 0;
 
@@ -946,15 +1017,10 @@ async function renderGallery() {
 function createGalleryItem(item) {
   const wrapper = document.createElement("article");
   wrapper.className = "gallery-item";
+  wrapper.dataset.itemKey = `${item.storeName}:${item.id}`;
 
-  const url = URL.createObjectURL(item.blob);
-  wrapper.dataset.objectUrl = url;
-
-  const media = document.createElement(item.type === "video" ? "video" : "img");
-  media.className = "gallery-media";
-  media.src = url;
-  if (item.type === "video") media.controls = true;
-  else media.alt = `Foto local guardada el ${formatDateTime(item.createdAt)}`;
+  const previewHost = document.createElement("div");
+  previewHost.className = "gallery-preview-host";
 
   const info = document.createElement("div");
   info.className = "gallery-info";
@@ -968,44 +1034,101 @@ function createGalleryItem(item) {
   const buttons = document.createElement("div");
   buttons.className = "gallery-buttons";
 
+  const previewButton = document.createElement("button");
+  previewButton.type = "button";
+  previewButton.textContent = "Ver";
+  previewButton.addEventListener("click", () => previewGalleryItem(item, previewHost, previewButton));
+
   const shareButton = document.createElement("button");
   shareButton.className = "share-button";
   shareButton.type = "button";
   shareButton.textContent = item.type === "video" ? "Guardar" : "Compartir";
   shareButton.addEventListener("click", () => shareItem(item));
 
-  const openLink = document.createElement("a");
-  openLink.href = url;
-  openLink.target = "_blank";
-  openLink.rel = "noopener";
-  openLink.textContent = "Abrir";
-  openLink.addEventListener("click", () => {
-    setStatus("Menú del sistema abierto.");
-  });
-
-  const downloadLink = document.createElement("a");
-  downloadLink.href = url;
-  downloadLink.download = buildFileName(item);
-  downloadLink.textContent = "Descargar";
-  downloadLink.addEventListener("click", () => {
-    setStatus("Opciones del sistema abiertas.");
-  });
+  const downloadButton = document.createElement("button");
+  downloadButton.type = "button";
+  downloadButton.textContent = "Descargar";
+  downloadButton.addEventListener("click", () => downloadGalleryItem(item));
 
   const deleteButton = document.createElement("button");
   deleteButton.className = "delete-item-button";
   deleteButton.type = "button";
   deleteButton.textContent = "Borrar";
   deleteButton.addEventListener("click", async () => {
+    if (activeGalleryPreview?.key === `${item.storeName}:${item.id}`) closeActiveGalleryPreview();
     await deleteItem(item.storeName, item.id);
     await renderGallery();
     setStatus("Mensaje retirado.");
   });
 
   info.append(text);
-  buttons.append(shareButton, openLink, downloadLink, deleteButton);
-  if (technical) wrapper.append(media, info, technical, buttons);
-  else wrapper.append(media, info, buttons);
+  buttons.append(previewButton, shareButton, downloadButton, deleteButton);
+  if (technical) wrapper.append(info, technical, previewHost, buttons);
+  else wrapper.append(info, previewHost, buttons);
   return wrapper;
+}
+
+async function previewGalleryItem(item, host, button) {
+  const key = `${item.storeName}:${item.id}`;
+  if (activeGalleryPreview?.key === key) {
+    closeActiveGalleryPreview();
+    return;
+  }
+
+  closeActiveGalleryPreview();
+  host.textContent = "Cargando vista previa...";
+  host.classList.add("loading");
+
+  try {
+    const storedItem = await getItem(item.storeName, item.id);
+    if (!storedItem?.blob) throw new Error("El archivo ya no está disponible.");
+
+    const url = URL.createObjectURL(storedItem.blob);
+    const media = document.createElement(item.type === "video" ? "video" : "img");
+    media.className = "gallery-media";
+    media.src = url;
+
+    if (item.type === "video") {
+      media.controls = true;
+      media.playsInline = true;
+      media.preload = "metadata";
+    } else {
+      media.alt = `Imagen local del ${formatDateTime(item.createdAt)}`;
+      media.loading = "lazy";
+      media.decoding = "async";
+    }
+
+    media.addEventListener("error", () => {
+      closeActiveGalleryPreview();
+      host.textContent = "No se pudo reproducir este archivo.";
+      host.classList.add("error");
+      setStatus("Error al abrir el archivo. Puede estar dañado o usar un formato no compatible.", true);
+    }, { once: true });
+
+    host.replaceChildren(media);
+    host.classList.remove("loading", "error");
+    button.textContent = "Cerrar";
+    activeGalleryPreview = { key, host, button, url, media };
+  } catch (error) {
+    host.textContent = `No se pudo abrir: ${friendlyStorageMessage(error)}`;
+    host.classList.remove("loading");
+    host.classList.add("error");
+    setStatus("No se pudo abrir el archivo seleccionado.", true);
+  }
+}
+
+function closeActiveGalleryPreview() {
+  if (!activeGalleryPreview) return;
+  const { host, button, url, media } = activeGalleryPreview;
+  if (media?.pause) media.pause();
+  if (media) media.removeAttribute("src");
+  if (url) URL.revokeObjectURL(url);
+  if (host) {
+    host.replaceChildren();
+    host.classList.remove("loading", "error");
+  }
+  if (button) button.textContent = "Ver";
+  activeGalleryPreview = null;
 }
 
 function createTechnicalInfo(item) {
@@ -1034,7 +1157,7 @@ function createTechnicalInfo(item) {
   const requestedBitrate = technical.requestedVideoBitsPerSecond
     ? `${Math.round(technical.requestedVideoBitsPerSecond / 1_000_000)} Mbps`
     : "50 Mbps";
-  const blobSize = technical.blobSize || item.blob?.size || 0;
+  const blobSize = technical.blobSize || item.blobSize || item.blob?.size || 0;
   const size = blobSize
     ? formatBytes(blobSize)
     : "desconocido";
@@ -1064,11 +1187,13 @@ function createTechnicalInfo(item) {
 }
 
 async function shareItem(item) {
-  const file = new File([item.blob], buildFileName(item), {
-    type: item.mimeType || item.blob.type || "application/octet-stream",
-  });
-
   try {
+    const storedItem = await getItem(item.storeName, item.id);
+    if (!storedItem?.blob) throw new Error("El archivo ya no está disponible.");
+    const file = new File([storedItem.blob], buildFileName(storedItem), {
+      type: storedItem.mimeType || storedItem.blob.type || "application/octet-stream",
+    });
+
     if (navigator.canShare?.({ files: [file] }) && navigator.share) {
       await navigator.share({
         files: [file],
@@ -1097,6 +1222,22 @@ async function shareItem(item) {
   }
 }
 
+async function downloadGalleryItem(item) {
+  try {
+    const storedItem = await getItem(item.storeName, item.id);
+    if (!storedItem?.blob) throw new Error("El archivo ya no está disponible.");
+    const url = URL.createObjectURL(storedItem.blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = buildFileName(storedItem);
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 5000);
+    setStatus("Opciones del sistema abiertas.");
+  } catch (error) {
+    setStatus("No se pudo preparar la descarga.", true);
+  }
+}
+
 function buildFileName(item) {
   const stamp = new Date(item.createdAt).toISOString().replace(/[:.]/g, "-");
   const mime = item.mimeType || item.blob?.type || "";
@@ -1115,18 +1256,13 @@ async function clearGallery() {
   if (!confirmed) return;
 
   try {
+    closeActiveGalleryPreview();
     await Promise.all([clearStore(PHOTO_STORE), clearStore(VIDEO_STORE)]);
     await renderGallery();
     setStatus("Historial limpiado.");
   } catch (error) {
     setStatus(`No se pudo limpiar: ${friendlyStorageMessage(error)}`, true);
   }
-}
-
-function revokeGalleryUrls() {
-  els.galleryList.querySelectorAll("[data-object-url]").forEach((node) => {
-    URL.revokeObjectURL(node.dataset.objectUrl);
-  });
 }
 
 function handleCameraError(error, fallback) {
