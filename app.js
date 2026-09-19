@@ -3,25 +3,18 @@ const DB_VERSION = 1;
 const PHOTO_STORE = "photos";
 const VIDEO_STORE = "videos";
 const APP_NAME = "ChispaChat";
-const APP_VERSION = "v10";
-const HIGH_QUALITY_VIDEO = {
-  facingMode: { ideal: "environment" },
-  width: { ideal: 3840 },
-  height: { ideal: 2160 },
-  frameRate: { ideal: 60 },
-};
-const HD_QUALITY_VIDEO = {
-  facingMode: { ideal: "environment" },
-  width: { ideal: 1920 },
-  height: { ideal: 1080 },
-  frameRate: { ideal: 60 },
-};
-const FALLBACK_VIDEO = {
-  facingMode: { ideal: "environment" },
-  width: { ideal: 1280 },
-  height: { ideal: 720 },
-  frameRate: { ideal: 30 },
-};
+const APP_VERSION = "v11";
+const VIDEO_PROFILES = [
+  { width: 3840, height: 2160, frameRate: 60 },
+  { width: 3840, height: 2160, frameRate: 30 },
+  { width: 1920, height: 1080, frameRate: 60 },
+  { width: 1920, height: 1080, frameRate: 30 },
+  { width: 1280, height: 720, frameRate: 60 },
+  { width: 1280, height: 720, frameRate: 30 },
+];
+const MIN_RECORDING_WIDTH = 1280;
+const MIN_RECORDING_HEIGHT = 720;
+const MIN_RECORDING_FPS = 24;
 const RECORDING_BITS_PER_SECOND = 50_000_000;
 const RECORD_AUDIO = false;
 const STATIC_CHATS = {
@@ -138,6 +131,7 @@ const STATIC_CHATS = {
 const els = {
   chatList: document.querySelector(".chat-list"),
   cameraPreview: document.getElementById("cameraPreview"),
+  chatCameraAnchor: document.getElementById("chatCameraAnchor"),
   photoCanvas: document.getElementById("photoCanvas"),
   statusMessage: document.getElementById("statusMessage"),
   privacyNotice: document.getElementById("privacyNotice"),
@@ -159,9 +153,13 @@ const els = {
   chatDialogAvatar: document.getElementById("chatDialogAvatar"),
   chatDialogTitle: document.getElementById("chatDialogTitle"),
   chatDialogSubtitle: document.getElementById("chatDialogSubtitle"),
+  chatRecordingIndicator: document.getElementById("chatRecordingIndicator"),
+  chatRecordingLabel: document.getElementById("chatRecordingLabel"),
   chatMessages: document.getElementById("chatMessages"),
   chatComposer: document.getElementById("chatComposer"),
   chatInput: document.getElementById("chatInput"),
+  fakeAudioButton: document.getElementById("fakeAudioButton"),
+  fakeAudioTime: document.getElementById("fakeAudioTime"),
 };
 
 let dbPromise;
@@ -170,6 +168,10 @@ let mediaRecorder;
 let recordedChunks = [];
 let recordingStartedAt = 0;
 let isRecording = false;
+let recordingQualityTimer = null;
+let recordingStartSettings = {};
+let fakeAudioStartedAt = 0;
+let fakeAudioTimer = null;
 let activeStaticChatId = "";
 const staticReplyIndexes = {};
 
@@ -194,6 +196,8 @@ function init() {
   els.zoomStories.addEventListener("click", handleZoomStoryClick);
   els.chatList.addEventListener("click", handleStaticChatClick);
   els.chatComposer.addEventListener("submit", handleStaticChatSubmit);
+  els.fakeAudioButton.addEventListener("click", toggleFakeAudio);
+  els.chatDialog.addEventListener("close", resetFakeAudio);
   els.openGalleryButton.addEventListener("click", openGallery);
   els.refreshGalleryButton.addEventListener("click", renderGallery);
   els.clearGalleryButton.addEventListener("click", clearGallery);
@@ -242,11 +246,13 @@ function openDatabase() {
 }
 
 // Safari iOS exige que getUserMedia ocurra tras una acción del usuario.
-async function getCameraStream({ audio = false } = {}) {
+async function getCameraStream({ audio = false, requireRecordingQuality = false } = {}) {
   const liveVideo = cameraStream?.getVideoTracks().some((track) => track.readyState === "live");
   const liveAudio = cameraStream?.getAudioTracks().some((track) => track.readyState === "live");
+  const currentTrack = cameraStream?.getVideoTracks()[0];
+  const qualityIsValid = !requireRecordingQuality || isAcceptableRecordingQuality(currentTrack?.getSettings?.());
 
-  if (liveVideo && (!audio || liveAudio)) {
+  if (liveVideo && (!audio || liveAudio) && qualityIsValid) {
     return cameraStream;
   }
 
@@ -259,32 +265,84 @@ async function getCameraStream({ audio = false } = {}) {
   try {
     cameraStream = await getBestVideoStream(audio);
   } catch (error) {
-    if (!audio) {
-      cameraStream = await getBestVideoStream(false);
-    } else {
+    if (audio) {
       // Si el permiso de micrófono bloquea vídeo en algún Safari, reintentamos solo cámara.
       cameraStream = await getBestVideoStream(false);
+    } else {
+      throw error;
     }
   }
 
-  els.cameraPreview.srcObject = cameraStream;
-  await els.cameraPreview.play();
+  await attachStreamToVideoAnchors(cameraStream);
   return cameraStream;
 }
 
+async function attachStreamToVideoAnchors(stream) {
+  const anchors = [els.cameraPreview, els.chatCameraAnchor];
+  for (const video of anchors) {
+    if (!video) continue;
+    video.srcObject = stream;
+    try {
+      await video.play();
+    } catch (error) {
+      // El anclaje principal seguirá activo aunque iOS retrase el secundario.
+    }
+  }
+}
+
 async function getBestVideoStream(audio) {
-  const profiles = [HIGH_QUALITY_VIDEO, HD_QUALITY_VIDEO, FALLBACK_VIDEO];
   let lastError;
 
-  for (const video of profiles) {
+  for (const profile of VIDEO_PROFILES) {
+    const video = {
+      facingMode: { ideal: "environment" },
+      width: { exact: profile.width },
+      height: { exact: profile.height },
+      frameRate: { exact: profile.frameRate },
+    };
+
     try {
-      return await navigator.mediaDevices.getUserMedia({ audio, video });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio, video });
+      const settings = stream.getVideoTracks()[0]?.getSettings?.() || {};
+
+      if (isAcceptableRecordingQuality(settings)) {
+        return stream;
+      }
+
+      stream.getTracks().forEach((track) => track.stop());
+      lastError = createQualityError(settings);
     } catch (error) {
+      if (["NotAllowedError", "SecurityError", "NotReadableError"].includes(error?.name)) {
+        throw error;
+      }
       lastError = error;
     }
   }
 
   throw lastError || new Error("No se pudo abrir este chat.");
+}
+
+function isAcceptableRecordingQuality(settings = {}) {
+  const width = Number(settings.width) || 0;
+  const height = Number(settings.height) || 0;
+  const longEdge = Math.max(width, height);
+  const shortEdge = Math.min(width, height);
+  const fps = Number(settings.frameRate) || 0;
+  return longEdge >= MIN_RECORDING_WIDTH && shortEdge >= MIN_RECORDING_HEIGHT && fps >= MIN_RECORDING_FPS;
+}
+
+function createQualityError(settings = {}) {
+  const error = new Error(`Resolución insuficiente: ${describeSettings(settings)}`);
+  error.name = "RecordingQualityError";
+  error.settings = settings;
+  return error;
+}
+
+function describeSettings(settings = {}) {
+  const width = settings.width || "?";
+  const height = settings.height || "?";
+  const fps = settings.frameRate ? `${roundOne(settings.frameRate)} fps` : "fps desconocidos";
+  return `${width}x${height} · ${fps}`;
 }
 
 function stopCameraStream() {
@@ -296,6 +354,40 @@ function stopCameraStream() {
 function stopAudioTracks() {
   if (!cameraStream) return;
   cameraStream.getAudioTracks().forEach((track) => track.stop());
+}
+
+function startRecordingQualityMonitor() {
+  stopRecordingQualityMonitor();
+  recordingQualityTimer = window.setInterval(checkRecordingQuality, 2000);
+  checkRecordingQuality();
+}
+
+function stopRecordingQualityMonitor() {
+  if (!recordingQualityTimer) return;
+  window.clearInterval(recordingQualityTimer);
+  recordingQualityTimer = null;
+}
+
+function checkRecordingQuality() {
+  if (!isRecording) return;
+  const track = cameraStream?.getVideoTracks()[0];
+  const settings = track?.getSettings?.() || {};
+  const qualityIsValid = track?.readyState === "live" && isAcceptableRecordingQuality(settings);
+
+  els.chatRecordingIndicator.classList.toggle("warning", !qualityIsValid);
+  els.chatRecordingLabel.textContent = qualityIsValid ? "en curso" : "calidad reducida";
+
+  if (!qualityIsValid) {
+    setStatus(`Error de resolución: ${describeSettings(settings)}.` , true);
+  }
+}
+
+function updateRecordingIndicators() {
+  els.chatRecordingIndicator.hidden = !isRecording;
+  if (isRecording) {
+    els.chatRecordingIndicator.classList.remove("warning");
+    els.chatRecordingLabel.textContent = "en curso";
+  }
 }
 
 async function capturePhoto() {
@@ -367,10 +459,20 @@ async function toggleRecording() {
 
   try {
     setStatus("Abriendo conversación...");
-    const stream = await getCameraStream({ audio: RECORD_AUDIO });
+    const stream = await getCameraStream({ audio: RECORD_AUDIO, requireRecordingQuality: true });
+    await setCameraZoom(1, { silent: true });
+    await waitForVideoFrame();
+    const videoTrack = stream.getVideoTracks()[0];
+    const settings = videoTrack?.getSettings?.() || {};
+
+    if (!isAcceptableRecordingQuality(settings)) {
+      throw createQualityError(settings);
+    }
+
     const mimeType = chooseVideoMimeType();
     recordedChunks = [];
     recordingStartedAt = Date.now();
+    recordingStartSettings = { ...settings };
     mediaRecorder = createRecorder(stream, mimeType);
 
     mediaRecorder.ondataavailable = (event) => {
@@ -383,13 +485,21 @@ async function toggleRecording() {
     };
 
     mediaRecorder.onstop = saveRecording;
-    mediaRecorder.start();
+    videoTrack.addEventListener("ended", () => {
+      if (!isRecording) return;
+      setStatus("La cámara se interrumpió. La nota se cerrará con lo grabado hasta ahora.", true);
+      els.chatRecordingIndicator.classList.add("warning");
+      els.chatRecordingLabel.textContent = "interrumpido";
+      stopRecording();
+    }, { once: true });
+    mediaRecorder.start(1000);
     isRecording = true;
     els.videoLastMessage.textContent = "escribiendo...";
     els.videoMeta.textContent = "";
     els.zoomStories.hidden = false;
     setActiveZoomButton(1);
-    await setCameraZoom(1, { silent: true });
+    startRecordingQualityMonitor();
+    updateRecordingIndicators();
     setStatus("escribiendo...");
   } catch (error) {
     handleCameraError(error, "No se pudo iniciar la grabación.");
@@ -417,6 +527,11 @@ async function saveRecording() {
       throw new Error("La grabación no generó datos.");
     }
 
+    const encoded = await inspectRecordedBlob(blob);
+    const estimatedBitsPerSecond = duration > 0 ? Math.round((blob.size * 8) / duration) : null;
+    const encodedQualityIsValid = !encoded.width || !encoded.height
+      || isAcceptableResolution(encoded.width, encoded.height);
+
     await saveItem(VIDEO_STORE, {
       type: "video",
       blob,
@@ -425,10 +540,13 @@ async function saveRecording() {
       endedAt: new Date(endedAt).toISOString(),
       duration,
       technical: {
-        requestedWidth: HIGH_QUALITY_VIDEO.width.ideal,
-        requestedHeight: HIGH_QUALITY_VIDEO.height.ideal,
-        requestedFrameRate: HIGH_QUALITY_VIDEO.frameRate.ideal,
+        requestedWidth: VIDEO_PROFILES[0].width,
+        requestedHeight: VIDEO_PROFILES[0].height,
+        requestedFrameRate: VIDEO_PROFILES[0].frameRate,
         requestedVideoBitsPerSecond: RECORDING_BITS_PER_SECOND,
+        startWidth: recordingStartSettings.width || null,
+        startHeight: recordingStartSettings.height || null,
+        startFrameRate: recordingStartSettings.frameRate || null,
         actualWidth: videoSettings.width || null,
         actualHeight: videoSettings.height || null,
         actualFrameRate: videoSettings.frameRate || null,
@@ -438,6 +556,10 @@ async function saveRecording() {
         blobType: blob.type || null,
         blobSize: blob.size,
         recorderMimeType: mediaRecorder?.mimeType || null,
+        encodedWidth: encoded.width || null,
+        encodedHeight: encoded.height || null,
+        encodedDuration: encoded.duration || null,
+        estimatedBitsPerSecond,
         zoom: videoSettings.zoom || null,
         zoomMin: videoCapabilities.zoom?.min ?? null,
         zoomMax: videoCapabilities.zoom?.max ?? null,
@@ -446,7 +568,11 @@ async function saveRecording() {
 
     els.videoLastMessage.textContent = `nota enviada · ${formatDuration(duration)}`;
     els.videoMeta.textContent = formatTime(new Date());
-    setStatus("Mensaje enviado.");
+    if (encodedQualityIsValid) {
+      setStatus("Mensaje enviado.");
+    } else {
+      setStatus(`Error de resolución del archivo: ${encoded.width}x${encoded.height}.`, true);
+    }
   } catch (error) {
     setStatus(`No se pudo completar: ${friendlyStorageMessage(error)}`, true);
   } finally {
@@ -455,17 +581,53 @@ async function saveRecording() {
   }
 }
 
+function inspectRecordedBlob(blob) {
+  return new Promise((resolve) => {
+    const video = document.createElement("video");
+    const url = URL.createObjectURL(blob);
+    let settled = false;
+
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      URL.revokeObjectURL(url);
+      video.removeAttribute("src");
+      resolve(result);
+    };
+
+    video.preload = "metadata";
+    video.playsInline = true;
+    video.onloadedmetadata = () => finish({
+      width: video.videoWidth || null,
+      height: video.videoHeight || null,
+      duration: Number.isFinite(video.duration) ? video.duration : null,
+    });
+    video.onerror = () => finish({ width: null, height: null, duration: null });
+    video.src = url;
+    window.setTimeout(() => finish({ width: null, height: null, duration: null }), 3000);
+  });
+}
+
+function isAcceptableResolution(width, height) {
+  const longEdge = Math.max(Number(width) || 0, Number(height) || 0);
+  const shortEdge = Math.min(Number(width) || 0, Number(height) || 0);
+  return longEdge >= MIN_RECORDING_WIDTH && shortEdge >= MIN_RECORDING_HEIGHT;
+}
+
 function resetRecordingUi(updateMessage = true) {
+  stopRecordingQualityMonitor();
   isRecording = false;
   mediaRecorder = null;
   recordedChunks = [];
   recordingStartedAt = 0;
+  recordingStartSettings = {};
 
   if (updateMessage) {
     els.videoLastMessage.textContent = "nota pendiente";
     els.videoMeta.textContent = "local";
   }
   els.zoomStories.hidden = true;
+  updateRecordingIndicators();
 }
 
 function chooseVideoMimeType() {
@@ -525,9 +687,19 @@ async function setCameraZoom(requestedZoom, { silent = false } = {}) {
   const min = typeof capabilities.zoom.min === "number" ? capabilities.zoom.min : 1;
   const max = typeof capabilities.zoom.max === "number" ? capabilities.zoom.max : requestedZoom;
   const zoom = Math.min(Math.max(requestedZoom, min), max);
+  const previousZoom = track.getSettings?.().zoom || 1;
 
   try {
     await track.applyConstraints({ advanced: [{ zoom }] });
+    await delay(100);
+    const settings = track.getSettings?.() || {};
+
+    if (isRecording && !isAcceptableRecordingQuality(settings)) {
+      await track.applyConstraints({ advanced: [{ zoom: previousZoom }] }).catch(() => {});
+      if (!silent) setStatus(`Error de resolución: ${describeSettings(settings)}. Se mantuvo el story anterior.`, true);
+      return false;
+    }
+
     setActiveZoomButton(requestedZoom);
     if (!silent) {
       setStatus("Story actualizado.");
@@ -537,6 +709,10 @@ async function setCameraZoom(requestedZoom, { silent = false } = {}) {
     if (!silent) setStatus("No se pudo cambiar de story.", true);
     return false;
   }
+}
+
+function delay(milliseconds) {
+  return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 }
 
 function setActiveZoomButton(zoom) {
@@ -555,6 +731,7 @@ function openStaticChat(chatId) {
   const chat = STATIC_CHATS[chatId];
   if (!chat) return;
 
+  resetFakeAudio();
   activeStaticChatId = chatId;
   els.chatDialogTitle.textContent = chat.title;
   els.chatDialogSubtitle.textContent = chat.subtitle;
@@ -572,7 +749,9 @@ function openStaticChat(chatId) {
   } else {
     els.chatDialog.setAttribute("open", "");
   }
+  if (cameraStream) attachStreamToVideoAnchors(cameraStream);
   els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
+  updateRecordingIndicators();
   setTimeout(() => els.chatInput.focus(), 150);
 }
 
@@ -586,7 +765,54 @@ function handleStaticChatSubmit(event) {
   scrollChatToBottom();
   setStatus("Mensaje enviado.");
 
-  const chat = STATIC_CHATS[activeStaticChatId];
+  queueStaticReply();
+}
+
+function toggleFakeAudio() {
+  if (!activeStaticChatId) return;
+
+  if (fakeAudioStartedAt) {
+    const duration = Math.max(1, Math.round((Date.now() - fakeAudioStartedAt) / 1000));
+    resetFakeAudio();
+    appendMessageBubble("outgoing", `🎙️ Audio · ${formatDuration(duration)}`, formatTime(new Date()));
+    scrollChatToBottom();
+    setStatus("Nota enviada.");
+    queueStaticReply();
+    return;
+  }
+
+  fakeAudioStartedAt = Date.now();
+  els.fakeAudioButton.classList.add("recording");
+  els.fakeAudioTime.hidden = false;
+  els.chatInput.disabled = true;
+  els.chatInput.placeholder = "Grabando audio...";
+  updateFakeAudioTime();
+  fakeAudioTimer = window.setInterval(updateFakeAudioTime, 250);
+  setStatus("grabando audio...");
+}
+
+function updateFakeAudioTime() {
+  if (!fakeAudioStartedAt) return;
+  const duration = Math.floor((Date.now() - fakeAudioStartedAt) / 1000);
+  els.fakeAudioTime.textContent = formatDuration(duration);
+}
+
+function resetFakeAudio() {
+  if (fakeAudioTimer) window.clearInterval(fakeAudioTimer);
+  fakeAudioTimer = null;
+  fakeAudioStartedAt = 0;
+  els.fakeAudioButton.classList.remove("recording");
+  els.fakeAudioTime.hidden = true;
+  els.fakeAudioTime.textContent = "00:00";
+  els.chatInput.disabled = false;
+  els.chatInput.placeholder = "Mensaje";
+}
+
+function queueStaticReply() {
+  const chatId = activeStaticChatId;
+  const chat = STATIC_CHATS[chatId];
+  if (!chat) return;
+
   const typing = document.createElement("div");
   typing.className = "typing-bubble";
   typing.textContent = "escribiendo...";
@@ -595,10 +821,11 @@ function handleStaticChatSubmit(event) {
 
   window.setTimeout(() => {
     typing.remove();
+    if (activeStaticChatId !== chatId || !els.chatDialog.open) return;
     const replies = chat.replies || ["Recibido. Muchas gracias. ✅"];
-    const index = staticReplyIndexes[activeStaticChatId] || 0;
+    const index = staticReplyIndexes[chatId] || 0;
     const reply = replies[index % replies.length];
-    staticReplyIndexes[activeStaticChatId] = index + 1;
+    staticReplyIndexes[chatId] = index + 1;
     appendMessageBubble("incoming", reply, formatTime(new Date()));
     scrollChatToBottom();
     setStatus("Chat actualizado.");
@@ -789,6 +1016,15 @@ function createTechnicalInfo(item) {
   const actualFps = technical.actualFrameRate
     ? `${roundOne(technical.actualFrameRate)} fps`
     : "desconocido";
+  const encodedResolution = technical.encodedWidth && technical.encodedHeight
+    ? `${technical.encodedWidth}x${technical.encodedHeight}`
+    : "desconocida";
+  const startResolution = technical.startWidth && technical.startHeight
+    ? `${technical.startWidth}x${technical.startHeight}`
+    : "desconocida";
+  const startFps = technical.startFrameRate
+    ? `${roundOne(technical.startFrameRate)} fps`
+    : "desconocido";
   const requestedResolution = technical.requestedWidth && technical.requestedHeight
     ? `${technical.requestedWidth}x${technical.requestedHeight}`
     : "3840x2160";
@@ -798,8 +1034,12 @@ function createTechnicalInfo(item) {
   const requestedBitrate = technical.requestedVideoBitsPerSecond
     ? `${Math.round(technical.requestedVideoBitsPerSecond / 1_000_000)} Mbps`
     : "50 Mbps";
-  const size = technical.blobSize || item.blob?.size
-    ? formatBytes(technical.blobSize || item.blob.size)
+  const blobSize = technical.blobSize || item.blob?.size || 0;
+  const size = blobSize
+    ? formatBytes(blobSize)
+    : "desconocido";
+  const estimatedBitrate = technical.estimatedBitsPerSecond
+    ? `${roundOne(technical.estimatedBitsPerSecond / 1_000_000)} Mbps estimados`
     : "desconocido";
   const mime = technical.mimeType || item.mimeType || "desconocido";
   const blobType = technical.blobType || "desconocido";
@@ -812,7 +1052,9 @@ function createTechnicalInfo(item) {
   box.className = "technical-info";
   box.innerHTML = `
     <div><dt>Solicitado</dt><dd>${requestedResolution} · ${requestedFps} · ${requestedBitrate}</dd></div>
-    <div><dt>Concedido</dt><dd>${actualResolution} · ${actualFps}</dd></div>
+    <div><dt>Al iniciar</dt><dd>${startResolution} · ${startFps}</dd></div>
+    <div><dt>Al finalizar</dt><dd>${actualResolution} · ${actualFps}</dd></div>
+    <div><dt>Archivo real</dt><dd>${encodedResolution} · ${estimatedBitrate}</dd></div>
     <div><dt>Formato</dt><dd>${mime}</dd></div>
     <div><dt>Blob</dt><dd>${blobType} · ${size}</dd></div>
     <div><dt>Cámara</dt><dd>${technical.facingMode || "sin dato"}</dd></div>
@@ -893,8 +1135,10 @@ function handleCameraError(error, fallback) {
 
   if (name === "NotAllowedError" || name === "SecurityError") {
     message = "No se pudo abrir este chat. Revisa los permisos de Safari.";
+  } else if (name === "RecordingQualityError") {
+    message = `Error de resolución: ${describeSettings(error.settings)}. No se inició la grabación.`;
   } else if (name === "NotFoundError" || name === "OverconstrainedError") {
-    message = "Este chat no está disponible ahora mismo.";
+    message = "No hay un perfil de cámara compatible con al menos 720p. No se inició la grabación.";
   } else if (name === "NotReadableError") {
     message = "Este chat está ocupado. Inténtalo de nuevo.";
   } else if (String(error?.message || "").includes("IndexedDB")) {

@@ -54,12 +54,14 @@ Para probar desde iPhone, sirve el proyecto por HTTPS. GitHub Pages es suficient
 - Toca varias veces `Alicia compipiso` para guardar varias fotos.
 - Toca `Mamá móvil` para iniciar vídeo.
 - Toca de nuevo `Mamá móvil` para parar y guardar.
-- La grabación pide cámara trasera a 4K/60 fps como preferencia y usa bitrate alto. Si Safari/iOS no lo permite, cae a 1080p/60 y luego a 720p/30.
+- La grabación prueba perfiles estrictos en este orden: 4K/60, 4K/30, 1080p/60, 1080p/30 y 720p. Si Safari concede menos de 720p/24 fps, la grabación no se inicia y se muestra un error.
 - Mientras grabas aparecen avatares tipo stories para intentar cambiar zoom internamente entre `0,5x`, `1x`, `2x` y `5x`. Safari solo los aplicará si expone la capacidad `zoom` para esa cámara.
 - El resto de conversaciones abren chats estáticos locales con mensajes simulados. No se conectan a ningún servidor.
+- La grabación principal continúa al abrir los chats estáticos. Un anclaje de vídeo dentro del diálogo ayuda a evitar que Safari suspenda el stream al abrir el teclado o navegar por los mensajes.
+- El botón de audio de los chats es una simulación visual local: muestra contador y burbuja, pero no captura micrófono.
 - Abre `Galería local` para ver, reproducir o borrar elementos guardados.
 - En cada elemento de la galería puedes usar `Compartir`, `Abrir` o `Descargar`.
-- En los vídeos, la galería muestra metadatos técnicos reales: resolución/fps concedidos, formato, tamaño, bitrate solicitado y datos de zoom.
+- En los vídeos, la galería muestra metadatos técnicos reales: resolución/fps al iniciar y finalizar, resolución codificada del archivo, bitrate estimado, formato, tamaño y datos de zoom.
 - En iPhone, usa `Compartir` para abrir la hoja de iOS y elegir `Guardar imagen` o `Guardar vídeo` cuando esa opción esté disponible.
 
 ## Limitaciones reales de iOS/Safari

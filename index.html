@@ -16,7 +16,7 @@
     <div class="app-shell">
       <header class="topbar">
         <div>
-          <p class="eyebrow">Mensajes · v10</p>
+          <p class="eyebrow">Mensajes · v11</p>
           <h1>ChispaChat</h1>
         </div>
         <button id="openGalleryButton" class="icon-button" type="button" aria-label="Abrir galería local" title="Galería local">
@@ -31,9 +31,9 @@
         </section>
 
         <section class="status-panel" aria-live="polite">
-          <video id="cameraPreview" class="camera-preview" playsinline muted autoplay hidden></video>
+          <video id="cameraPreview" class="camera-preview" playsinline muted autoplay aria-hidden="true"></video>
           <canvas id="photoCanvas" hidden></canvas>
-          <p id="statusMessage">v10 · Chats actualizados</p>
+          <p id="statusMessage">v11 · Chats actualizados</p>
         </section>
 
         <section id="zoomStories" class="zoom-stories" aria-label="Controles de zoom de cámara" hidden>
@@ -156,6 +156,7 @@
     </dialog>
 
     <dialog id="chatDialog" class="chat-dialog">
+      <video id="chatCameraAnchor" class="camera-preview" playsinline muted autoplay aria-hidden="true"></video>
       <form method="dialog" class="chat-dialog-header">
         <button class="back-button" value="close" aria-label="Volver a conversaciones" title="Volver" type="submit">
           <span aria-hidden="true">‹</span>
@@ -164,12 +165,17 @@
         <div class="chat-dialog-copy">
           <h2 id="chatDialogTitle">Conversación</h2>
           <p id="chatDialogSubtitle">en línea</p>
+          <span id="chatRecordingIndicator" class="chat-recording-indicator" hidden><i></i><b id="chatRecordingLabel">en curso</b></span>
         </div>
       </form>
       <div id="chatMessages" class="message-thread" aria-live="polite"></div>
       <form id="chatComposer" class="chat-composer" autocomplete="off">
         <input id="chatInput" type="text" inputmode="text" placeholder="Mensaje" aria-label="Escribir mensaje">
-        <button type="submit" aria-label="Enviar mensaje" title="Enviar">
+        <button id="fakeAudioButton" class="audio-button" type="button" aria-label="Simular nota de audio" title="Audio">
+          <span class="audio-icon" aria-hidden="true">●</span>
+          <span id="fakeAudioTime" class="audio-time" hidden>00:00</span>
+        </button>
+        <button class="send-button" type="submit" aria-label="Enviar mensaje" title="Enviar">
           <span aria-hidden="true">↑</span>
         </button>
       </form>
